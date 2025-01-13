@@ -3,13 +3,15 @@
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 from database import Session, Game, PlayerAction
-from config import BOT_TOKEN, CHANNEL_ID, CHIP_VALUE, CHIP_COUNT
-from datetime import datetime
+from config import BOT_TOKEN, CHANNEL_ID, CHIP_VALUE, CHIP_COUNT, TIMEZONE
+from datetime import datetime, timezone
+import pytz
 
 class PokerBot:
     def __init__(self):
         self.current_game_id = None
         self.application = Application.builder().token(BOT_TOKEN).build()
+        self.timezone = pytz.timezone(TIMEZONE)
         self._register_handlers()
 
     def _register_handlers(self):
@@ -20,13 +22,16 @@ class PokerBot:
         self.application.add_handler(CommandHandler("summary", self.summary))
         self.application.add_handler(CommandHandler("log", self.log))
 
+    def format_datetime(self, dt):
+        return dt.astimezone(self.timezone).strftime("%d-%m-%Y %H:%M:%S")
+
     async def start_game(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         if self.current_game_id is not None:
             await update.message.reply_text("Игра уже начата!")
             return
 
         session = Session()
-        new_game = Game()
+        new_game = Game(start_time=datetime.now(timezone.utc))
         session.add(new_game)
         session.commit()
         self.current_game_id = new_game.id
@@ -86,8 +91,8 @@ class PokerBot:
             return
 
         session = Session()
-        game = session.query(Game).get(self.current_game_id)
-        game.end_time = datetime.utcnow()
+        game = session.get(Game, self.current_game_id)
+        game.end_time = datetime.now(timezone.utc)
         session.commit()
         session.close()
         self.current_game_id = None
@@ -112,7 +117,9 @@ class PokerBot:
         actions = session.query(PlayerAction).all()
         log_text = "Лог действий:\n"
         for action in actions:
-            log_text += f"{action.timestamp}: {action.username} - {action.action} ({action.chips} фишек, {action.amount} лева)\n"
+            timestamp = action.timestamp.replace(tzinfo=timezone.utc)
+            formatted_timestamp = self.format_datetime(timestamp)
+            log_text += f"{formatted_timestamp}: {action.username} - {action.action} ({action.chips} фишек, {action.amount} лева)\n"
         session.close()
         await update.message.reply_text(log_text)
 
