@@ -6,6 +6,7 @@ from database import Session, Game, PlayerAction
 from config import BOT_TOKEN, CHANNEL_ID, CHIP_VALUE, CHIP_COUNT, TIMEZONE
 from datetime import datetime, timezone
 import pytz
+from prettytable import PrettyTable
 
 class PokerBot:
     def __init__(self):
@@ -137,11 +138,32 @@ class PokerBot:
         if not actions:
             await context.bot.send_message(chat_id=CHANNEL_ID, text="Закупов в текущей игре ещё не было.")
         else:
-            summary_text = "Сводка закупов:\n"
+            table = PrettyTable()
+            table.field_names = ["Имя", "Закуплено (лв)", "Выход (лв)", "Разница (лв)"]
+            total_buyins = 0
+            total_quits = 0
+            player_stats = {}
+
             for action in actions:
                 if action.action == "buyin":
-                    summary_text += f"{action.username}: {action.chips} фишек ({action.amount} лева)\n"
-            await context.bot.send_message(chat_id=CHANNEL_ID, text=summary_text)
+                    total_buyins += action.amount
+                    if action.username not in player_stats:
+                        player_stats[action.username] = {"buyin": 0, "quit": 0}
+                    player_stats[action.username]["buyin"] += action.amount
+                elif action.action == "quit":
+                    total_quits += action.amount
+                    if action.username not in player_stats:
+                        player_stats[action.username] = {"buyin": 0, "quit": 0}
+                    player_stats[action.username]["quit"] += action.amount
+
+            for username, stats in player_stats.items():
+                balance = stats["quit"] - stats["buyin"]
+                table.add_row([username, f"{stats['buyin']:.2f}", f"{stats['quit']:.2f}", f"{balance:.2f}"])
+
+            bank_total = total_buyins - total_quits
+            summary_text = f"Сводка закупов:\n{table}\n\nТекущая сумма денег в банке: {bank_total:.2f} лева"
+
+            await context.bot.send_message(chat_id=CHANNEL_ID, text=f"<pre>{summary_text}</pre>", parse_mode="HTML")
         session.close()
 
     async def log(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
