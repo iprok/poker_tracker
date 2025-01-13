@@ -22,6 +22,7 @@ class PokerBot:
         self.application.add_handler(CommandHandler("endgame", self.end_game))
         self.application.add_handler(CommandHandler("summary", self.summary))
         self.application.add_handler(CommandHandler("log", self.log))
+        self.application.add_handler(CommandHandler("help", self.help))
 
     def format_datetime(self, dt):
         return dt.astimezone(self.timezone).strftime("%d-%m-%Y %H:%M:%S")
@@ -193,6 +194,19 @@ class PokerBot:
 
                 await context.bot.send_message(chat_id=CHANNEL_ID, text=summary_text)
         session.close()
+
+    async def help(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        help_text = (
+            "Список команд:\n"
+            "/startgame - Начать новую игру.\n"
+            "/buyin - Закупить фишки.\n"
+            "/quit <фишки> - Выйти из игры, указав количество оставшихся фишек.\n"
+            "/endgame - Завершить текущую игру.\n"
+            "/summary - Показать сводку текущей игры.\n"
+            "/log - Показать лог всех действий.\n"
+            "/help - Показать это сообщение."
+        )
+        await update.message.reply_text(help_text)        
 
     async def log(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
