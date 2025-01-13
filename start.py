@@ -35,7 +35,21 @@ class PokerBot:
         session.add(new_game)
         session.commit()
         self.current_game_id = new_game.id
+
+        # Log the start of the game
+        action = PlayerAction(
+            game_id=self.current_game_id,
+            user_id=update.effective_user.id,
+            username=update.effective_user.username,
+            action="start_game",
+            chips=None,
+            amount=None,
+            timestamp=datetime.now(timezone.utc)
+        )
+        session.add(action)
+        session.commit()
         session.close()
+
         await update.message.reply_text("Игра начата! Закупки открыты.")
 
     async def buyin(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -93,8 +107,23 @@ class PokerBot:
         session = Session()
         game = session.get(Game, self.current_game_id)
         game.end_time = datetime.now(timezone.utc)
+
+        # Log the end of the game
+        action = PlayerAction(
+            game_id=self.current_game_id,
+            user_id=update.effective_user.id,
+            username=update.effective_user.username,
+            action="end_game",
+            chips=None,
+            amount=None,
+            timestamp=datetime.now(timezone.utc)
+        )
+        session.add(action)
+
+        # Commit all changes in one transaction
         session.commit()
         session.close()
+
         self.current_game_id = None
         await update.message.reply_text("Игра завершена.")
 
