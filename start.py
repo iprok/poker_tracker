@@ -134,12 +134,15 @@ class PokerBot:
 
         session = Session()
         actions = session.query(PlayerAction).filter_by(game_id=self.current_game_id).all()
-        summary_text = "Сводка закупов:\n"
-        for action in actions:
-            if action.action == "buyin":
-                summary_text += f"{action.username}: {action.chips} фишек ({action.amount} лева)\n"
+        if not actions:
+            await context.bot.send_message(chat_id=CHANNEL_ID, text="Закупов в текущей игре ещё не было.")
+        else:
+            summary_text = "Сводка закупов:\n"
+            for action in actions:
+                if action.action == "buyin":
+                    summary_text += f"{action.username}: {action.chips} фишек ({action.amount} лева)\n"
+            await context.bot.send_message(chat_id=CHANNEL_ID, text=summary_text)
         session.close()
-        await context.bot.send_message(chat_id=CHANNEL_ID, text=summary_text)
 
     async def log(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
