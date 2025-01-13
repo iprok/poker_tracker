@@ -7,6 +7,7 @@ from config import BOT_TOKEN, CHANNEL_ID, CHIP_VALUE, CHIP_COUNT, TIMEZONE, USE_
 from datetime import datetime, timezone
 import pytz
 from prettytable import PrettyTable
+from sqlalchemy.sql import func
 
 class PokerBot:
     def __init__(self):
@@ -80,14 +81,35 @@ class PokerBot:
             return
 
         user = update.effective_user
+        session = Session()
+
+        # Calculate total chips in the bank
+        total_buyins = session.query(PlayerAction).filter_by(
+            game_id=self.current_game_id, action="buyin"
+        ).count() * CHIP_COUNT
+        total_quits = session.query(PlayerAction).filter_by(
+            game_id=self.current_game_id, action="quit"
+        ).with_entities(func.sum(PlayerAction.chips)).scalar() or 0
+
+        max_chips = total_buyins - total_quits
+
         try:
+            if not context.args:
+                raise ValueError("Вы не указали количество фишек. Укажите значение от 25 до {max_chips}.")
+
             chips_left = int(context.args[0])
-        except (IndexError, ValueError):
-            await update.message.reply_text("Укажите количество фишек после выхода, например: /quit 1500")
+            if chips_left < 25:
+                raise ValueError("Количество фишек не может быть меньше 25.")
+            if chips_left > max_chips:
+                raise ValueError(f"Количество фишек не может быть больше доступных в банке: {max_chips}.")
+        except (ValueError, IndexError) as e:
+            await update.message.reply_text(
+                f"Ошибка: {e}. Пример использования: /quit 1500"
+            )
+            session.close()
             return
 
         amount = (chips_left / CHIP_COUNT) * CHIP_VALUE
-        session = Session()
         action = PlayerAction(
             game_id=self.current_game_id,
             user_id=user.id,
@@ -195,19 +217,6 @@ class PokerBot:
                 await context.bot.send_message(chat_id=CHANNEL_ID, text=summary_text)
         session.close()
 
-    async def help(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        help_text = (
-            "Список команд:\n"
-            "/startgame - Начать новую игру.\n"
-            "/buyin - Закупить фишки.\n"
-            "/quit <фишки> - Выйти из игры, указав количество оставшихся фишек.\n"
-            "/endgame - Завершить текущую игру.\n"
-            "/summary - Показать сводку текущей игры.\n"
-            "/log - Показать лог всех действий.\n"
-            "/help - Показать это сообщение."
-        )
-        await update.message.reply_text(help_text)        
-
     async def log(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
         actions = session.query(PlayerAction).all()
@@ -219,6 +228,19 @@ class PokerBot:
             log_text += f"{formatted_timestamp}: {action.username} - {action.action} ({action.chips} фишек, {amount} лева)\n"
         session.close()
         await update.message.reply_text(log_text)
+
+    async def help(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        help_text = (
+            "Список команд:\n"
+            "/startgame - Начать новую игру.\n"
+            "/buyin - Закупить фишки.\n"
+            "/quit <фишки> - Выйти из игры, указав количество оставшихся фишек.\n"
+            "/endgame - Завершить текущую игру.\n"
+            "/summary - Показать сводку текущей игры.\n"
+            "/log - Показать лог всех действий.\n"
+            "/help - Показать это сообщение."
+        )
+        await update.message.reply_text(help_text)
 
     def run(self):
         self.application.run_polling()
