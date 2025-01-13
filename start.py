@@ -151,7 +151,8 @@ class PokerBot:
         for action in actions:
             timestamp = action.timestamp.replace(tzinfo=timezone.utc)
             formatted_timestamp = self.format_datetime(timestamp)
-            log_text += f"{formatted_timestamp}: {action.username} - {action.action} ({action.chips} фишек, {action.amount} лева)\n"
+            amount = f"{action.amount:.2f}" if action.amount is not None else "None"
+            log_text += f"{formatted_timestamp}: {action.username} - {action.action} ({action.chips} фишек, {amount} лева)\n"
         session.close()
         await update.message.reply_text(log_text)
 
