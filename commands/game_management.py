@@ -10,12 +10,19 @@ from decorators import restrict_to_channel
 class GameManagement:
 
     @staticmethod
-    @restrict_to_channel
     async def start_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
+
+        # Проверяем, есть ли незавершённая игра в базе данных
+        if "current_game_id" in context.bot_data:
+            await update.message.reply_text("Игра уже начата!")
+            session.close()
+            return
+
         current_game = session.query(Game).filter_by(end_time=None).first()
         if current_game:
-            await update.message.reply_text("Игра уже начата!")
+            context.bot_data["current_game_id"] = current_game.id
+            await update.message.reply_text("Игра уже начата! Это восстановленная игра.")
             session.close()
             return
 
