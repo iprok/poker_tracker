@@ -5,10 +5,12 @@ from telegram.ext import ContextTypes
 from prettytable import PrettyTable
 from config import CHIP_VALUE, CHIP_COUNT, CHANNEL_ID, USE_TABLE
 from utils import format_datetime
+from decorators import restrict_to_channel
 
 class GameManagement:
 
     @staticmethod
+    @restrict_to_channel
     async def start_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
         current_game = session.query(Game).filter_by(end_time=None).first()
@@ -39,6 +41,7 @@ class GameManagement:
         await update.message.reply_text("Игра начата! Закупки открыты.")
 
     @staticmethod
+    @restrict_to_channel
     async def end_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
         current_game = session.query(Game).filter_by(end_time=None).first()
@@ -68,6 +71,7 @@ class GameManagement:
         await update.message.reply_text("Игра завершена.")
 
     @staticmethod
+    @restrict_to_channel
     async def summary(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
         current_game_id = context.bot_data.get("current_game_id")

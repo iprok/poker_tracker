@@ -5,10 +5,12 @@ from telegram.ext import ContextTypes
 from sqlalchemy.sql import func
 from utils import format_datetime
 from config import CHIP_VALUE, CHIP_COUNT
+from decorators import restrict_to_channel
 
 class PlayerActions:
 
     @staticmethod
+    @restrict_to_channel
     async def buyin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
         current_game_id = context.bot_data.get("current_game_id")
@@ -35,6 +37,7 @@ class PlayerActions:
         await update.message.reply_text(f"Закуп на {CHIP_COUNT} фишек ({CHIP_VALUE} лева) записан.")
 
     @staticmethod
+    @restrict_to_channel
     async def quit(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
         current_game_id = context.bot_data.get("current_game_id")
@@ -86,6 +89,7 @@ class PlayerActions:
         await update.message.reply_text(f"Выход записан. У вас осталось {chips_left} фишек, что эквивалентно {amount:.2f} лева.")
 
     @staticmethod
+    @restrict_to_channel
     async def log(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
         actions = session.query(PlayerAction).all()
@@ -98,6 +102,7 @@ class PlayerActions:
         await update.message.reply_text(log_text)
 
     @staticmethod
+    @restrict_to_channel
     async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         help_text = (
             "Список команд:\n"
