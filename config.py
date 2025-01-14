@@ -9,3 +9,5 @@ CHIP_VALUE = config["chip_value"]
 CHIP_COUNT = config["chip_count"]
 TIMEZONE = config["timezone"]
 USE_TABLE = config.get("use_table",True)
+SHOW_SUMMARY_ON_BUYIN = config["show_summary_on_buyin"]
+SHOW_SUMMARY_ON_QUIT = config["show_summary_on_quit"]

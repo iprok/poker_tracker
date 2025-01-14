@@ -3,7 +3,7 @@ from database import Session, Game, PlayerAction
 from telegram import Update
 from telegram.ext import ContextTypes
 from prettytable import PrettyTable
-from config import CHIP_VALUE, CHIP_COUNT, CHANNEL_ID, USE_TABLE
+from config import CHIP_VALUE, CHIP_COUNT, CHANNEL_ID
 from utils import format_datetime
 from decorators import restrict_to_channel
 
@@ -76,52 +76,3 @@ class GameManagement:
 
         session.close()
         await update.message.reply_text("Игра завершена.")
-
-    @staticmethod
-    @restrict_to_channel
-    async def summary(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        session = Session()
-        current_game_id = context.bot_data.get("current_game_id")
-        if current_game_id is None:
-            await update.message.reply_text("Игра не начата.")
-            session.close()
-            return
-
-        actions = session.query(PlayerAction).filter_by(game_id=current_game_id).all()
-        if not actions:
-            await update.message.reply_text("Закупов в текущей игре ещё не было.")
-            session.close()
-            return
-
-        player_stats = {}
-        for action in actions:
-            if action.username not in player_stats:
-                player_stats[action.username] = {"buyin": 0, "quit": 0}
-
-            if action.action == "buyin":
-                player_stats[action.username]["buyin"] += action.amount
-            elif action.action == "quit":
-                player_stats[action.username]["quit"] += action.amount
-
-        if USE_TABLE:
-            table = PrettyTable()
-            table.field_names = ["Имя", "buy", "quit", "diff"]
-
-            for username, stats in player_stats.items():
-                balance = stats["quit"] - stats["buyin"]
-                table.add_row([username, f"{stats['buyin']:.2f}", f"{stats['quit']:.2f}", f"{balance:.2f}"])
-
-            summary_text = f"<pre>Сводка закупов:\n{table}</pre>"
-            await update.message.reply_text(summary_text, parse_mode="HTML")
-        else:
-            summary_text = "Сводка закупов:\n"
-            for username, stats in player_stats.items():
-                balance = stats["quit"] - stats["buyin"]
-                summary_text += (
-                    f"{username}: закупился на {stats['buyin']:.2f} лева, "
-                    f"вышел на {stats['quit']:.2f} лева, разница: {balance:.2f} лева\n"
-                )
-
-            await update.message.reply_text(summary_text)
-
-        session.close()

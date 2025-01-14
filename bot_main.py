@@ -12,11 +12,11 @@ def run_bot():
     # Регистрация команд управления игрой
     application.add_handler(CommandHandler("startgame", GameManagement.start_game))
     application.add_handler(CommandHandler("endgame", GameManagement.end_game))
-    application.add_handler(CommandHandler("summary", GameManagement.summary))
 
     # Регистрация команд действий игроков
     application.add_handler(CommandHandler("buyin", PlayerActions.buyin))
     application.add_handler(CommandHandler("quit", PlayerActions.quit))
+    application.add_handler(CommandHandler("summary", PlayerActions.summary))
     application.add_handler(CommandHandler("log", PlayerActions.log))
     application.add_handler(CommandHandler("help", PlayerActions.help))
 
