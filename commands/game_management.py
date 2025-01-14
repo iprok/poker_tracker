@@ -4,6 +4,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 from prettytable import PrettyTable
 from config import CHIP_VALUE, CHIP_COUNT, CHANNEL_ID, USE_TABLE
+from utils import format_datetime
 
 class GameManagement:
 
@@ -23,6 +24,17 @@ class GameManagement:
         # Сохраняем game_id в контексте бота
         context.bot_data["current_game_id"] = new_game.id
 
+        # Логируем старт игры
+        action = PlayerAction(
+            game_id=new_game.id,
+            user_id=update.effective_user.id,
+            username=update.effective_user.username,
+            action="start_game",
+            timestamp=datetime.now(timezone.utc)
+        )
+        session.add(action)
+        session.commit()
+
         session.close()
         await update.message.reply_text("Игра начата! Закупки открыты.")
 
@@ -40,6 +52,17 @@ class GameManagement:
 
         # Удаляем текущий game_id из контекста
         context.bot_data.pop("current_game_id", None)
+
+        # Логируем завершение игры
+        action = PlayerAction(
+            game_id=current_game.id,
+            user_id=update.effective_user.id,
+            username=update.effective_user.username,
+            action="end_game",
+            timestamp=datetime.now(timezone.utc)
+        )
+        session.add(action)
+        session.commit()
 
         session.close()
         await update.message.reply_text("Игра завершена.")

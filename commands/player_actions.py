@@ -3,6 +3,7 @@ from database import Session, PlayerAction
 from telegram import Update
 from telegram.ext import ContextTypes
 from sqlalchemy.sql import func
+from utils import format_datetime
 from config import CHIP_VALUE, CHIP_COUNT
 
 class PlayerActions:
@@ -24,7 +25,8 @@ class PlayerActions:
             username=user.username,
             action="buyin",
             chips=CHIP_COUNT,
-            amount=CHIP_VALUE
+            amount=CHIP_VALUE,
+            timestamp=datetime.now(timezone.utc)
         )
         session.add(action)
         session.commit()
@@ -74,7 +76,8 @@ class PlayerActions:
             username=user.username,
             action="quit",
             chips=chips_left,
-            amount=amount
+            amount=amount,
+            timestamp=datetime.now(timezone.utc)
         )
         session.add(action)
         session.commit()
@@ -88,9 +91,9 @@ class PlayerActions:
         actions = session.query(PlayerAction).all()
         log_text = "Лог действий:\n"
         for action in actions:
-            timestamp = action.timestamp.replace(tzinfo=timezone.utc).strftime("%d-%m-%Y %H:%M:%S")
+            formatted_timestamp = format_datetime(action.timestamp)
             amount = f"{action.amount:.2f}" if action.amount is not None else "None"
-            log_text += f"{timestamp}: {action.username} - {action.action} ({action.chips} фишек, {amount} лева)\n"
+            log_text += f"{formatted_timestamp}: {action.username} - {action.action} ({action.chips} фишек, {amount} лева)\n"
         session.close()
         await update.message.reply_text(log_text)
 
