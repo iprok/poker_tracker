@@ -86,19 +86,19 @@ class GameManagement:
             session.close()
             return
 
+        player_stats = {}
+        for action in actions:
+            if action.username not in player_stats:
+                player_stats[action.username] = {"buyin": 0, "quit": 0}
+
+            if action.action == "buyin":
+                player_stats[action.username]["buyin"] += action.amount
+            elif action.action == "quit":
+                player_stats[action.username]["quit"] += action.amount
+
         if USE_TABLE:
             table = PrettyTable()
             table.field_names = ["Имя", "buy", "quit", "diff"]
-
-            player_stats = {}
-            for action in actions:
-                if action.username not in player_stats:
-                    player_stats[action.username] = {"buyin": 0, "quit": 0}
-
-                if action.action == "buyin":
-                    player_stats[action.username]["buyin"] += action.amount
-                elif action.action == "quit":
-                    player_stats[action.username]["quit"] += action.amount
 
             for username, stats in player_stats.items():
                 balance = stats["quit"] - stats["buyin"]
@@ -108,8 +108,13 @@ class GameManagement:
             await update.message.reply_text(summary_text, parse_mode="HTML")
         else:
             summary_text = "Сводка закупов:\n"
-            for action in actions:
-                summary_text += f"{action.username} - {action.action}: {action.amount} лева\n"
+            for username, stats in player_stats.items():
+                balance = stats["quit"] - stats["buyin"]
+                summary_text += (
+                    f"{username}: закупился на {stats['buyin']:.2f} лева, "
+                    f"вышел на {stats['quit']:.2f} лева, разница: {balance:.2f} лева\n"
+                )
+
             await update.message.reply_text(summary_text)
 
         session.close()
