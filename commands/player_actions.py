@@ -3,6 +3,7 @@ from database import Session, PlayerAction
 from telegram import Update
 from telegram.ext import ContextTypes
 from sqlalchemy.sql import func
+from sqlalchemy import or_
 from utils import format_datetime
 from config import CHIP_VALUE, CHIP_COUNT, USE_TABLE, SHOW_SUMMARY_ON_BUYIN, SHOW_SUMMARY_ON_QUIT
 from decorators import restrict_to_channel
@@ -117,7 +118,12 @@ class PlayerActions:
             session.close()
             return
 
-        actions = session.query(PlayerAction).filter_by(game_id=current_game_id).all()
+        # Проверяем наличие действий buyin или quit и получаем их сразу
+        actions = session.query(PlayerAction).filter(
+            PlayerAction.game_id == current_game_id,
+            or_(PlayerAction.action == "buyin", PlayerAction.action == "quit")
+        ).all()
+
         if not actions:
             await update.message.reply_text("Закупов в текущей игре ещё не было.")
             session.close()
