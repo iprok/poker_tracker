@@ -1,11 +1,13 @@
 from datetime import datetime, timezone
-from database import Session, PlayerAction
+from database import Session, PlayerAction, Game
 from telegram import Update
 from telegram.ext import ContextTypes
+from sqlalchemy import desc
 from sqlalchemy.sql import func
-from utils import format_datetime
-from config import CHIP_VALUE, CHIP_COUNT, USE_TABLE, SHOW_SUMMARY_ON_BUYIN, SHOW_SUMMARY_ON_QUIT
+from utils import format_datetime, format_datetime_to_date
+from config import CHIP_VALUE, CHIP_COUNT, USE_TABLE, SHOW_SUMMARY_ON_BUYIN, SHOW_SUMMARY_ON_QUIT, LOG_AMOUNT_LAST_GAMES
 from decorators import restrict_to_channel
+from prettytable import PrettyTable
 
 class PlayerActions:
 
@@ -123,6 +125,43 @@ class PlayerActions:
             session.close()
             return
 
+        game = session.query(Game).filter_by(id=current_game_id).one()
+        summary_text = PlayerActions.summary_formatter(actions, game)
+
+        await update.message.reply_text(summary_text, parse_mode="HTML")
+
+        session.close()
+
+    @staticmethod
+    @restrict_to_channel
+    async def summarygames(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        session = Session()
+        games = session.query(Game).order_by(desc(Game.id)).limit(LOG_AMOUNT_LAST_GAMES).all()
+
+        summary_text = f"<pre>Сводка последних {LOG_AMOUNT_LAST_GAMES} игр</pre>"
+        for game in games:
+            actions = session.query(PlayerAction).filter_by(game_id=game.id).all()
+            summary_text += PlayerActions.summary_formatter(actions, game)
+
+        await update.message.reply_text(summary_text, parse_mode="HTML")
+        session.close()
+
+    @staticmethod
+    @restrict_to_channel
+    async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        help_text = (
+            "Список команд:\n"
+            "/startgame - Начать новую игру.\n"
+            "/buyin - Закупить фишки.\n"
+            "/quit <фишки> - Выйти из игры, указав количество оставшихся фишек.\n"
+            "/endgame - Завершить текущую игру.\n"
+            "/summary - Показать сводку текущей игры.\n"
+            "/log - Показать лог всех действий.\n"
+            "/help - Показать это сообщение."
+        )
+        await update.message.reply_text(help_text)
+
+    def summary_formatter(actions, game) -> str:
         player_stats = {}
         for action in actions:
             if action.username not in player_stats:
@@ -141,10 +180,10 @@ class PlayerActions:
                 balance = stats["quit"] - stats["buyin"]
                 table.add_row([username, f"{stats['buyin']:.2f}", f"{stats['quit']:.2f}", f"{balance:.2f}"])
 
-            summary_text = f"<pre>Сводка закупов:\n{table}</pre>"
-            await update.message.reply_text(summary_text, parse_mode="HTML")
+            summary_text = f"<pre>Сводка закупов за \n{format_datetime_to_date(game.start_time)}:\n{table}</pre>"
+            return summary_text
         else:
-            summary_text = "Сводка закупов:\n"
+            summary_text = f"Сводка закупов за \n{format_datetime_to_date(game.start_time)}:\n"
             for username, stats in player_stats.items():
                 balance = stats["quit"] - stats["buyin"]
                 summary_text += (
@@ -152,21 +191,4 @@ class PlayerActions:
                     f"вышел на {stats['quit']:.2f} лева, разница: {balance:.2f} лева\n"
                 )
 
-            await update.message.reply_text(summary_text)
-
-        session.close()
-
-    @staticmethod
-    @restrict_to_channel
-    async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        help_text = (
-            "Список команд:\n"
-            "/startgame - Начать новую игру.\n"
-            "/buyin - Закупить фишки.\n"
-            "/quit <фишки> - Выйти из игры, указав количество оставшихся фишек.\n"
-            "/endgame - Завершить текущую игру.\n"
-            "/summary - Показать сводку текущей игры.\n"
-            "/log - Показать лог всех действий.\n"
-            "/help - Показать это сообщение."
-        )
-        await update.message.reply_text(help_text)
+            return summary_text

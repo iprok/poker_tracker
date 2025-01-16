@@ -17,6 +17,7 @@ def run_bot():
     application.add_handler(CommandHandler("buyin", PlayerActions.buyin))
     application.add_handler(CommandHandler("quit", PlayerActions.quit))
     application.add_handler(CommandHandler("summary", PlayerActions.summary))
+    application.add_handler(CommandHandler("summarygames", PlayerActions.summarygames))
     application.add_handler(CommandHandler("log", PlayerActions.log))
     application.add_handler(CommandHandler("help", PlayerActions.help))
 
