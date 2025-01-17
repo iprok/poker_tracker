@@ -67,8 +67,8 @@ class PlayerActions:
                 raise ValueError("Вы не указали количество фишек. Пример: /quit 1500")
 
             chips_left = int(context.args[0])
-            if chips_left < 25:
-                raise ValueError("Количество фишек не может быть меньше 25.")
+            if chips_left < 0:
+                raise ValueError("Количество фишек не может быть меньше 0.")
             if chips_left > max_chips:
                 raise ValueError(f"Количество фишек не может быть больше доступных в банке: {max_chips}.")
         except (ValueError, IndexError) as e:
