@@ -1,0 +1,11 @@
+{
+    "bot_token": "",
+    "channel_id": 0,
+    "chip_value": 2,
+    "chip_count": 3000,
+    "timezone": "Europe/Sofia",
+    "show_summary_on_buyin": true,
+    "show_summary_on_quit": true,
+    "use_table": true,
+    "log_amount_last_games": 10
+}
