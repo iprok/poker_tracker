@@ -164,14 +164,22 @@ class PlayerActions:
 
     def summary_formatter(actions, game) -> str:
         player_stats = {}
+        total_buyin = 0
+        total_quit = 0
+
         for action in actions:
             if action.username not in player_stats:
                 player_stats[action.username] = {"buyin": 0, "quit": 0}
 
             if action.action == "buyin":
                 player_stats[action.username]["buyin"] += action.amount
+                total_buyin += action.amount
+
             elif action.action == "quit":
                 player_stats[action.username]["quit"] += action.amount
+                total_quit += action.amount
+
+        total_balance = total_buyin - total_quit
 
         if USE_TABLE:
             table = PrettyTable()
@@ -191,5 +199,6 @@ class PlayerActions:
                     f"{username}: закупился на {stats['buyin']:.2f} лева, "
                     f"вышел на {stats['quit']:.2f} лева, разница: {balance:.2f} лева\n"
                 )
+            summary_text += f"\nОбщее количество денег в банке: {total_balance:.2f} лева."
 
             return summary_text
