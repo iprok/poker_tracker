@@ -151,14 +151,14 @@ class PlayerActions:
     async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         help_text = (
             "Список команд:\n"
-            "/startgame - Начать новую игру.\n"
-            "/buyin - Закупить фишки.\n"
-            "/quit <фишки> - Выйти из игры, указав количество оставшихся фишек.\n"
-            "/endgame - Завершить текущую игру.\n"
             "/summary - Показать сводку текущей игры.\n"
             "/summarygames - Показать сводку последних игр.\n"
             "/log - Показать лог всех действий.\n"
-            "/help - Показать это сообщение."
+            "/quit <фишки> - Выйти из игры, указав количество оставшихся фишек.\n"
+            "/help - Показать это сообщение.\n\n"
+            "/startgame - Начать новую игру.\n\n"
+            "/buyin - Закупить фишки.\n\n"
+            "/endgame - Завершить текущую игру.\n"
         )
         await update.message.reply_text(help_text)
 
