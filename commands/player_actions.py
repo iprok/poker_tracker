@@ -142,7 +142,6 @@ class PlayerActions:
             session.close()
             return
 
-        # Проверяем наличие действий buyin или quit и получаем их сразу
         actions = (
             session.query(PlayerAction)
             .filter(
@@ -151,11 +150,6 @@ class PlayerActions:
             )
             .all()
         )
-
-        if not actions:
-            await update.message.reply_text("Закупов в текущей игре ещё не было.")
-            session.close()
-            return
 
         game = session.query(Game).filter_by(id=current_game_id).one()
         summary_text = PlayerActions.summary_formatter(actions, game)
