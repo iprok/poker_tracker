@@ -1,6 +1,5 @@
 UNAME := $(shell uname)
 PROJECT_NAME=poker-bot
-PHP_FPM=$(DOCKER_COMPOSE) exec python_bot_poker
 
 DOCKER_COMPOSE=docker-compose -p $(PROJECT_NAME) -f docker-compose.yaml
 
