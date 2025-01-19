@@ -142,16 +142,8 @@ class PlayerActions:
             session.close()
             return
 
-        actions = (
-            session.query(PlayerAction)
-            .filter(
-                PlayerAction.game_id == current_game_id,
-                or_(PlayerAction.action == "buyin", PlayerAction.action == "quit"),
-            )
-            .all()
-        )
-
         game = session.query(Game).filter_by(id=current_game_id).one()
+        actions = PlayerActionRepository(session).find_actions_by_game(game.id)
         summary_text = PlayerActions.summary_formatter(actions, game)
 
         await update.message.reply_text(summary_text, parse_mode="HTML")
@@ -166,15 +158,7 @@ class PlayerActions:
 
         summary_text = f"<pre>Сводка последних {LOG_AMOUNT_LAST_GAMES} игр</pre>"
         for game in games:
-            actions = (
-                session.query(PlayerAction)
-                .filter(
-                    PlayerAction.game_id == game.id,
-                    or_(PlayerAction.action == "buyin", PlayerAction.action == "quit"),
-                )
-                .all()
-            )
-
+            actions = PlayerActionRepository(session).find_actions_by_game(game.id)
             summary_text += PlayerActions.summary_formatter(actions, game)
 
         await update.message.reply_text(summary_text, parse_mode="HTML")
@@ -201,7 +185,9 @@ class PlayerActions:
         total_buyin = 0
         total_quit = 0
 
-        summary_text = f"\nСводка закупов за {format_datetime_to_date(game.start_time)}:\n"
+        summary_text = (
+            f"\nСводка закупов за {format_datetime_to_date(game.start_time)}:\n"
+        )
 
         if not actions:
             summary_text += f"Закупов в текущей игре ещё не было.\n"
