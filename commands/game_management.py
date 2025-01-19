@@ -1,11 +1,13 @@
 from datetime import datetime, timezone
-from database import Session, Game, PlayerAction
+from engine import Session
 from telegram import Update
+from domain.entity.game import Game
+from domain.entity.player_action import PlayerAction
+from domain.repository.game_repository import GameRepository
+from domain.repository.player_action_repository import PlayerActionRepository
 from telegram.ext import ContextTypes
-from prettytable import PrettyTable
-from config import CHIP_VALUE, CHIP_COUNT, CHANNEL_ID
-from utils import format_datetime
 from decorators import restrict_to_channel
+
 
 class GameManagement:
 
@@ -19,16 +21,18 @@ class GameManagement:
             session.close()
             return
 
-        current_game = session.query(Game).filter_by(end_time=None).first()
+        current_game = GameRepository(session).find_active_game()
+
         if current_game:
             context.bot_data["current_game_id"] = current_game.id
-            await update.message.reply_text("Игра уже начата! Это восстановленная игра.")
+            await update.message.reply_text(
+                "Игра уже начата! Это восстановленная игра."
+            )
             session.close()
             return
 
         new_game = Game(start_time=datetime.now(timezone.utc))
-        session.add(new_game)
-        session.commit()
+        GameRepository(session).save(new_game)
 
         # Сохраняем game_id в контексте бота
         context.bot_data["current_game_id"] = new_game.id
@@ -39,10 +43,10 @@ class GameManagement:
             user_id=update.effective_user.id,
             username=update.effective_user.username,
             action="start_game",
-            timestamp=datetime.now(timezone.utc)
+            timestamp=datetime.now(timezone.utc),
         )
-        session.add(action)
-        session.commit()
+
+        PlayerActionRepository(session).save(action)
 
         session.close()
         await update.message.reply_text("Игра начата! Закупки открыты.")
@@ -51,14 +55,14 @@ class GameManagement:
     @restrict_to_channel
     async def end_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
-        current_game = session.query(Game).filter_by(end_time=None).first()
+        current_game = GameRepository(session).find_active_game()
         if not current_game:
             await update.message.reply_text("Игра не начата.")
             session.close()
             return
 
         current_game.end_time = datetime.now(timezone.utc)
-        session.commit()
+        GameRepository(session).save(current_game)
 
         # Удаляем текущий game_id из контекста
         context.bot_data.pop("current_game_id", None)
@@ -69,10 +73,9 @@ class GameManagement:
             user_id=update.effective_user.id,
             username=update.effective_user.username,
             action="end_game",
-            timestamp=datetime.now(timezone.utc)
+            timestamp=datetime.now(timezone.utc),
         )
-        session.add(action)
-        session.commit()
+        PlayerActionRepository(session).save(action)
 
         session.close()
         await update.message.reply_text("Игра завершена.")
