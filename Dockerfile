@@ -9,7 +9,7 @@ COPY . .
 
 # Install dependencies (if you have a requirements.txt)
 RUN pip install -r requirements.txt
-RUN pip install git+https://github.com/psf/black
+RUN pip install black
 
 # Specify the default command to run your Python app
 CMD ["python", "bot_main.py"]
