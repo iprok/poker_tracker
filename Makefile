@@ -9,5 +9,5 @@ up: ## Up project
 	@echo "Up poker bot..."
 	$(DOCKER_COMPOSE) up -d
 cs-fix:
-	@echo "Run phpstan..."
+	@echo "Code style formatter..."
 	$(DOCKER_COMPOSE) exec python_bot_poker black ./
