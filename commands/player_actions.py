@@ -172,7 +172,15 @@ class PlayerActions:
 
         summary_text = f"<pre>Сводка последних {LOG_AMOUNT_LAST_GAMES} игр</pre>"
         for game in games:
-            actions = session.query(PlayerAction).filter_by(game_id=game.id).all()
+            actions = (
+                session.query(PlayerAction)
+                .filter(
+                    PlayerAction.game_id == game.id,
+                    or_(PlayerAction.action == "buyin", PlayerAction.action == "quit"),
+                )
+                .all()
+            )
+
             summary_text += PlayerActions.summary_formatter(actions, game)
 
         await update.message.reply_text(summary_text, parse_mode="HTML")
@@ -198,6 +206,12 @@ class PlayerActions:
         player_stats = {}
         total_buyin = 0
         total_quit = 0
+
+        summary_text = f"\nСводка закупов за {format_datetime_to_date(game.start_time)}:\n"
+
+        if not actions:
+            summary_text += f"Закупов в текущей игре ещё не было.\n"
+            return summary_text
 
         for action in actions:
             if action.username not in player_stats:
@@ -228,12 +242,9 @@ class PlayerActions:
                     ]
                 )
 
-            summary_text = f"<pre>Сводка закупов за \n{format_datetime_to_date(game.start_time)}:\n{table}</pre>"
+            summary_text += f"<pre>{table}</pre>"
             return summary_text
         else:
-            summary_text = (
-                f"Сводка закупов за \n{format_datetime_to_date(game.start_time)}:\n"
-            )
             for username, stats in player_stats.items():
                 balance = stats["quit"] - stats["buyin"]
                 summary_text += (
@@ -241,7 +252,7 @@ class PlayerActions:
                     f"вышел на {stats['quit']:.2f} лева, разница: {balance:.2f} лева\n"
                 )
             summary_text += (
-                f"\nОбщее количество денег в банке: {total_balance:.2f} лева."
+                f"\nОбщее количество денег в банке: {total_balance:.2f} лева.\n"
             )
 
             return summary_text
