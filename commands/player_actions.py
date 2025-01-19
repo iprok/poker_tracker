@@ -3,7 +3,7 @@ from domain.entity.game import Game
 from domain.entity.player_action import PlayerAction
 from telegram import Update
 from telegram.ext import ContextTypes
-from sqlalchemy import desc,or_
+from sqlalchemy import desc, or_
 from sqlalchemy.sql import func
 from engine import Session
 from domain.repository.game_repository import GameRepository
@@ -143,10 +143,14 @@ class PlayerActions:
             return
 
         # Проверяем наличие действий buyin или quit и получаем их сразу
-        actions = session.query(PlayerAction).filter(
-            PlayerAction.game_id == current_game_id,
-            or_(PlayerAction.action == "buyin", PlayerAction.action == "quit")
-        ).all()
+        actions = (
+            session.query(PlayerAction)
+            .filter(
+                PlayerAction.game_id == current_game_id,
+                or_(PlayerAction.action == "buyin", PlayerAction.action == "quit"),
+            )
+            .all()
+        )
 
         if not actions:
             await update.message.reply_text("Закупов в текущей игре ещё не было.")
