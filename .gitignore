@@ -11,8 +11,6 @@ __pycache__/
 # Virtual Environment
 venv/
 env/
-Dockerfile
-docker-compose.yaml
 
 # SQLite Database
 *.db

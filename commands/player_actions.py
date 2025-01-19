@@ -1,13 +1,24 @@
 from datetime import datetime, timezone
-from database import Session, PlayerAction, Game
+from domain.entity.game import Game
+from domain.entity.player_action import PlayerAction
 from telegram import Update
 from telegram.ext import ContextTypes
-from sqlalchemy import desc
 from sqlalchemy.sql import func
+from engine import Session
+from domain.repository.game_repository import GameRepository
+from domain.repository.player_action_repository import PlayerActionRepository
 from utils import format_datetime, format_datetime_to_date
-from config import CHIP_VALUE, CHIP_COUNT, USE_TABLE, SHOW_SUMMARY_ON_BUYIN, SHOW_SUMMARY_ON_QUIT, LOG_AMOUNT_LAST_GAMES
+from config import (
+    CHIP_VALUE,
+    CHIP_COUNT,
+    USE_TABLE,
+    SHOW_SUMMARY_ON_BUYIN,
+    SHOW_SUMMARY_ON_QUIT,
+    LOG_AMOUNT_LAST_GAMES,
+)
 from decorators import restrict_to_channel
 from prettytable import PrettyTable
+
 
 class PlayerActions:
 
@@ -30,13 +41,14 @@ class PlayerActions:
             action="buyin",
             chips=CHIP_COUNT,
             amount=CHIP_VALUE,
-            timestamp=datetime.now(timezone.utc)
+            timestamp=datetime.now(timezone.utc),
         )
-        session.add(action)
-        session.commit()
+        PlayerActionRepository(session).save(action)
         session.close()
 
-        await update.message.reply_text(f"Закуп на {CHIP_COUNT} фишек ({CHIP_VALUE} лева) записан.")
+        await update.message.reply_text(
+            f"Закуп на {CHIP_COUNT} фишек ({CHIP_VALUE} лева) записан."
+        )
 
         if SHOW_SUMMARY_ON_BUYIN:
             await PlayerActions.summary(update, context)
@@ -52,13 +64,20 @@ class PlayerActions:
             session.close()
             return
 
-        total_buyins = session.query(PlayerAction).filter_by(
-            game_id=current_game_id, action="buyin"
-        ).count() * CHIP_COUNT
+        total_buyins = (
+            session.query(PlayerAction)
+            .filter_by(game_id=current_game_id, action="buyin")
+            .count()
+            * CHIP_COUNT
+        )
 
-        total_quits = session.query(PlayerAction).filter_by(
-            game_id=current_game_id, action="quit"
-        ).with_entities(func.sum(PlayerAction.chips)).scalar() or 0
+        total_quits = (
+            session.query(PlayerAction)
+            .filter_by(game_id=current_game_id, action="quit")
+            .with_entities(func.sum(PlayerAction.chips))
+            .scalar()
+            or 0
+        )
 
         max_chips = total_buyins - total_quits
 
@@ -70,7 +89,9 @@ class PlayerActions:
             if chips_left < 0:
                 raise ValueError("Количество фишек не может быть меньше 0.")
             if chips_left > max_chips:
-                raise ValueError(f"Количество фишек не может быть больше доступных в банке: {max_chips}.")
+                raise ValueError(
+                    f"Количество фишек не может быть больше доступных в банке: {max_chips}."
+                )
         except (ValueError, IndexError) as e:
             await update.message.reply_text(f"Ошибка: {e}")
             session.close()
@@ -85,13 +106,14 @@ class PlayerActions:
             action="quit",
             chips=chips_left,
             amount=amount,
-            timestamp=datetime.now(timezone.utc)
+            timestamp=datetime.now(timezone.utc),
         )
-        session.add(action)
-        session.commit()
+        PlayerActionRepository(session).save(action)
         session.close()
 
-        await update.message.reply_text(f"Выход записан. У вас осталось {chips_left} фишек, что эквивалентно {amount:.2f} лева.")
+        await update.message.reply_text(
+            f"Выход записан. У вас осталось {chips_left} фишек, что эквивалентно {amount:.2f} лева."
+        )
 
         if SHOW_SUMMARY_ON_QUIT:
             await PlayerActions.summary(update, context)
@@ -136,7 +158,7 @@ class PlayerActions:
     @restrict_to_channel
     async def summarygames(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
-        games = session.query(Game).order_by(desc(Game.id)).limit(LOG_AMOUNT_LAST_GAMES).all()
+        games = GameRepository(session).get_games_by_limit(LOG_AMOUNT_LAST_GAMES)
 
         summary_text = f"<pre>Сводка последних {LOG_AMOUNT_LAST_GAMES} игр</pre>"
         for game in games:
@@ -187,18 +209,29 @@ class PlayerActions:
 
             for username, stats in player_stats.items():
                 balance = stats["quit"] - stats["buyin"]
-                table.add_row([username, f"{stats['buyin']:.2f}", f"{stats['quit']:.2f}", f"{balance:.2f}"])
+                table.add_row(
+                    [
+                        username,
+                        f"{stats['buyin']:.2f}",
+                        f"{stats['quit']:.2f}",
+                        f"{balance:.2f}",
+                    ]
+                )
 
             summary_text = f"<pre>Сводка закупов за \n{format_datetime_to_date(game.start_time)}:\n{table}</pre>"
             return summary_text
         else:
-            summary_text = f"Сводка закупов за \n{format_datetime_to_date(game.start_time)}:\n"
+            summary_text = (
+                f"Сводка закупов за \n{format_datetime_to_date(game.start_time)}:\n"
+            )
             for username, stats in player_stats.items():
                 balance = stats["quit"] - stats["buyin"]
                 summary_text += (
                     f"{username}: закупился на {stats['buyin']:.2f} лева, "
                     f"вышел на {stats['quit']:.2f} лева, разница: {balance:.2f} лева\n"
                 )
-            summary_text += f"\nОбщее количество денег в банке: {total_balance:.2f} лева."
+            summary_text += (
+                f"\nОбщее количество денег в банке: {total_balance:.2f} лева."
+            )
 
             return summary_text
