@@ -35,6 +35,8 @@ class PlayerActions:
             return
 
         user = update.effective_user
+
+        # Добавляем закуп
         action = PlayerAction(
             game_id=current_game_id,
             user_id=user.id,
@@ -45,10 +47,23 @@ class PlayerActions:
             timestamp=datetime.now(timezone.utc),
         )
         PlayerActionRepository(session).save(action)
+
+        # Подсчитываем общее количество закупов и сумму
+        total_buyins = (
+            session.query(PlayerAction)
+            .filter_by(game_id=current_game_id, user_id=user.id, action="buyin")
+            .with_entities(func.count(PlayerAction.id), func.sum(PlayerAction.amount))
+            .first()
+        )
+
+        buyin_count = total_buyins[0] or 0
+        buyin_total = total_buyins[1] or 0.0
+
         session.close()
 
         await update.message.reply_text(
-            f"Закуп на {CHIP_COUNT} фишек ({CHIP_VALUE} лева) записан."
+            f"Закуп на {CHIP_COUNT} фишек ({CHIP_VALUE} лева) записан.\n"
+            f"Вы уже закупились {buyin_count} раз(а) на общую сумму {buyin_total:.2f} лева в этой игре."
         )
 
         if SHOW_SUMMARY_ON_BUYIN:
