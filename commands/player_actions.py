@@ -65,11 +65,30 @@ class PlayerActions:
             session.close()
             return
 
+        if not context.args:
+            await update.message.reply_text(
+                "Ошибка: Вы не указали количество фишек. Пример: /quit 1500"
+            )
+            session.close()
+            return
+
+        chips_left = int(context.args[0])
+
+        # Проверяем кратность
+        step = CHIP_COUNT / CHIP_VALUE
+        if chips_left % step != 0:
+            await update.message.reply_text(
+                f"Ошибка: Количество фишек должно быть кратно {int(step)}."
+            )
+            session.close()
+            return
+
         total_buyins = (
             session.query(PlayerAction)
             .filter_by(game_id=current_game_id, action="buyin")
-            .count()
-            * CHIP_COUNT
+            .with_entities(func.sum(PlayerAction.chips))
+            .scalar()
+            or 0
         )
 
         total_quits = (
@@ -82,19 +101,17 @@ class PlayerActions:
 
         max_chips = total_buyins - total_quits
 
-        try:
-            if not context.args:
-                raise ValueError("Вы не указали количество фишек. Пример: /quit 1500")
+        if chips_left < 0:
+            await update.message.reply_text(
+                "Ошибка: Количество фишек не может быть меньше 0."
+            )
+            session.close()
+            return
 
-            chips_left = int(context.args[0])
-            if chips_left < 0:
-                raise ValueError("Количество фишек не может быть меньше 0.")
-            if chips_left > max_chips:
-                raise ValueError(
-                    f"Количество фишек не может быть больше доступных в банке: {max_chips}."
-                )
-        except (ValueError, IndexError) as e:
-            await update.message.reply_text(f"Ошибка: {e}")
+        if chips_left > max_chips:
+            await update.message.reply_text(
+                f"Ошибка: Количество фишек не может быть больше доступных в банке: {max_chips}."
+            )
             session.close()
             return
 
@@ -109,7 +126,8 @@ class PlayerActions:
             amount=amount,
             timestamp=datetime.now(timezone.utc),
         )
-        PlayerActionRepository(session).save(action)
+        session.add(action)
+        session.commit()
         session.close()
 
         await update.message.reply_text(
