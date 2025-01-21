@@ -116,7 +116,33 @@ class PlayerActions:
             return
 
         amount = (chips_left / CHIP_COUNT) * CHIP_VALUE
+
+        # Подсчитываем баланс пользователя
         user = update.effective_user
+        user_buyins = (
+            session.query(PlayerAction)
+            .filter_by(game_id=current_game_id, user_id=user.id, action="buyin")
+            .with_entities(func.sum(PlayerAction.amount))
+            .scalar()
+            or 0
+        )
+
+        user_quits = (
+            session.query(PlayerAction)
+            .filter_by(game_id=current_game_id, user_id=user.id, action="quit")
+            .with_entities(func.sum(PlayerAction.amount))
+            .scalar()
+            or 0
+        )
+
+        user_balance = user_buyins - (user_quits + amount)
+        if user_balance > 0:
+            balance_message = f"Вы должны в банк {int(abs(user_balance))} лева."
+        elif user_balance < 0:
+            balance_message = f"Банк должен вам {int(abs(user_balance))} лева."
+        else:
+            balance_message = "Никто никому ничего не должен."
+
         action = PlayerAction(
             game_id=current_game_id,
             user_id=user.id,
@@ -130,9 +156,11 @@ class PlayerActions:
         session.commit()
         session.close()
 
-        await update.message.reply_text(
-            f"Выход записан. У вас осталось {chips_left} фишек, что эквивалентно {amount:.2f} лева."
+        quit_text = (
+            f"Выход записан. У вас осталось {chips_left} фишек, что эквивалентно {int(amount)} лева.\n"
+            f"До этого закупов от вас было на {int(user_buyins)} лв, выходов - на {int(user_quits)}лв.\n{balance_message}\n\n"
         )
+        await update.message.reply_text(quit_text)
 
         if SHOW_SUMMARY_ON_QUIT:
             await PlayerActions.summary(update, context)
