@@ -16,6 +16,7 @@ from config import (
     SHOW_SUMMARY_ON_BUYIN,
     SHOW_SUMMARY_ON_QUIT,
     LOG_AMOUNT_LAST_GAMES,
+    LOG_AMOUNT_LAST_ACTIONS
 )
 from decorators import restrict_to_channel
 from prettytable import PrettyTable
@@ -184,13 +185,27 @@ class PlayerActions:
     @restrict_to_channel
     async def log(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
-        actions = session.query(PlayerAction).all()
-        log_text = "Лог действий:\n"
+        
+        # Получаем последние записи, ограниченные конфигом
+        actions = (
+            session.query(PlayerAction)
+            .order_by(PlayerAction.timestamp.desc())  # Сортируем по времени (последние сначала)
+            .limit(LOG_AMOUNT_LAST_ACTIONS)  # Ограничиваем количество записей
+            .all()
+        )
+        
+        log_text = f"Лог последних {LOG_AMOUNT_LAST_ACTIONS} действий:\n"
         for action in actions:
             formatted_timestamp = format_datetime(action.timestamp)
             amount = f"{action.amount:.2f}" if action.amount is not None else "None"
-            log_text += f"{formatted_timestamp}: {action.username} - {action.action} ({action.chips} фишек, {amount} лева)\n"
+            log_text += (
+                f"{formatted_timestamp}: {action.username} - {action.action} "
+                f"({action.chips} фишек, {amount} лева)\n"
+            )
+        
         session.close()
+    
+        # Отправляем сообщение
         await update.message.reply_text(log_text)
 
     @staticmethod
