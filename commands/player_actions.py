@@ -8,7 +8,7 @@ from sqlalchemy.sql import func
 from engine import Session
 from domain.repository.game_repository import GameRepository
 from domain.repository.player_action_repository import PlayerActionRepository
-from utils import format_datetime, format_datetime_to_date
+from utils import format_datetime, format_datetime_to_date, get_user_info
 from config import (
     CHIP_VALUE,
     CHIP_COUNT,
@@ -220,7 +220,7 @@ class PlayerActions:
 
         game = session.query(Game).filter_by(id=current_game_id).one()
         actions = PlayerActionRepository(session).find_actions_by_game(game.id)
-        summary_text = PlayerActions.summary_formatter(actions, game)
+        summary_text = await PlayerActions.summary_formatter(actions, game, context)
 
         await update.message.reply_text(summary_text, parse_mode="HTML")
 
@@ -235,7 +235,7 @@ class PlayerActions:
         summary_text = f"<pre>Сводка последних {LOG_AMOUNT_LAST_GAMES} игр</pre>"
         for game in games:
             actions = PlayerActionRepository(session).find_actions_by_game(game.id)
-            summary_text += PlayerActions.summary_formatter(actions, game)
+            summary_text += await PlayerActions.summary_formatter(actions, game, context)
 
         await update.message.reply_text(summary_text, parse_mode="HTML")
         session.close()
@@ -256,7 +256,8 @@ class PlayerActions:
         )
         await update.message.reply_text(help_text)
 
-    def summary_formatter(actions, game) -> str:
+    @staticmethod
+    async def summary_formatter(actions, game, context: ContextTypes.DEFAULT_TYPE) -> str:
         player_stats = {}
         total_buyin = 0
         total_quit = 0
@@ -270,15 +271,18 @@ class PlayerActions:
             return summary_text
 
         for action in actions:
-            if action.username not in player_stats:
-                player_stats[action.username] = {"buyin": 0, "quit": 0}
+            # Получаем информацию о пользователе
+            user_info = await get_user_info(action.user_id, context)
+            
+            if user_info not in player_stats:
+                player_stats[user_info] = {"buyin": 0, "quit": 0}
 
             if action.action == "buyin":
-                player_stats[action.username]["buyin"] += action.amount
+                player_stats[user_info]["buyin"] += action.amount
                 total_buyin += action.amount
 
             elif action.action == "quit":
-                player_stats[action.username]["quit"] += action.amount
+                player_stats[user_info]["quit"] += action.amount
                 total_quit += action.amount
 
         total_balance = total_buyin - total_quit
