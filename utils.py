@@ -4,8 +4,6 @@ from config import TIMEZONE
 from telegram import Update
 from telegram.ext import ContextTypes
 
-
-
 def format_datetime(dt: datetime) -> str:
     """
     Форматирует дату и время в указанный временной пояс и возвращает строку формата DD-MM-YYYY HH:MM:SS.
@@ -27,12 +25,6 @@ def format_datetime_by_format(dt: datetime, format) -> str:
     return dt.astimezone(timezone).strftime(format)
 
 async def get_user_info(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> str:
-    """
-    Возвращает информацию о пользователе в формате:
-    - Имя и фамилия, если они есть.
-    - Логин (username), если имя и фамилия отсутствуют.
-    - User ID, если логин также отсутствует.
-    """
     try:
         # Получаем информацию о пользователе
         user = await context.bot.get_chat(user_id)
@@ -41,9 +33,25 @@ async def get_user_info(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> str
         if user.first_name or user.last_name:
             name_parts = []
             if user.first_name:
-                name_parts.append(user.first_name)
+                name_parts.append(
+                    user.first_name
+                    .replace("&", "&amp;")
+                    .replace("<", "&lt;")
+                    .replace(">", "&gt;")
+                    .replace('"', "&quot;")
+                    .replace("'", "&apos;")
+                    .replace("/", "&#47;")
+                )
             if user.last_name:
-                name_parts.append(user.last_name)
+                name_parts.append(
+                    user.last_name
+                    .replace("&", "&amp;")
+                    .replace("<", "&lt;")
+                    .replace(">", "&gt;")
+                    .replace('"', "&quot;")
+                    .replace("'", "&apos;")
+                    .replace("/", "&#47;")
+                )
             return " ".join(name_parts)
         
         # Если имя и фамилия отсутствуют, используем username

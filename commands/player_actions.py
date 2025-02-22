@@ -258,20 +258,18 @@ class PlayerActions:
 
     @staticmethod
     async def summary_formatter(actions, game, context: ContextTypes.DEFAULT_TYPE) -> str:
+        """
+        Форматирует сводку игры, группируя игроков по их балансу:
+        - Должны банку (отрицательный баланс).
+        - Банк должен (положительный баланс).
+        - Обрели гармонию (нулевой баланс).
+        """
         player_stats = {}
         total_buyin = 0
         total_quit = 0
 
-        summary_text = (
-            f"\nСводка закупов за {format_datetime_to_date(game.start_time)}:\n"
-        )
-
-        if not actions:
-            summary_text += f"Закупов в текущей игре ещё не было.\n"
-            return summary_text
-
+        # Собираем статистику по игрокам
         for action in actions:
-            # Получаем информацию о пользователе
             user_info = await get_user_info(action.user_id, context)
             
             if user_info not in player_stats:
@@ -285,34 +283,54 @@ class PlayerActions:
                 player_stats[user_info]["quit"] += action.amount
                 total_quit += action.amount
 
+        # Рассчитываем баланс для каждого игрока
+        players_with_balance = []
+        for username, stats in player_stats.items():
+            balance = stats["quit"] - stats["buyin"]
+            players_with_balance.append((username, balance, abs(balance)))  # (имя, баланс, |баланс|)
+
+        # Сортируем игроков по абсолютному значению баланса (от большего к меньшему)
+        players_with_balance.sort(key=lambda x: x[2], reverse=True)
+
+        # Группируем игроков по категориям
+        debtors = []  # Должны банку (balance < 0)
+        creditors = []  # Банк должен (balance > 0)
+        balanced = []  # Обрели гармонию (balance == 0)
+
+        for username, balance, _ in players_with_balance:
+            if balance < 0:
+                debtors.append((username, balance))
+            elif balance > 0:
+                creditors.append((username, balance))
+            else:
+                balanced.append((username, balance))
+
+        # Формируем текст сводки
+        summary_text = f"Статистика игры за {format_datetime_to_date(game.start_time)}:\n\n"
+
+        # Должны банку
+        if debtors:
+            summary_text += "💸 <b>Должны банку:</b>\n"
+            for username, balance in debtors:
+                summary_text += f"{username}: {-balance:.2f} лева\n"
+            summary_text += "\n"
+
+        # Банк должен
+        if creditors:
+            summary_text += "💰 <b>Банк должен:</b>\n"
+            for username, balance in creditors:
+                summary_text += f"{username}: {balance:.2f} лева\n"
+            summary_text += "\n"
+
+        # Обрели гармонию
+        if balanced:
+            summary_text += "☯️ <b>Обрели гармонию:</b>\n"
+            for username, balance in balanced:
+                summary_text += f"{username}: {balance:.2f} лева\n"
+            summary_text += "\n"
+
+        # Общий баланс
         total_balance = total_buyin - total_quit
+        summary_text += f"💼 <b>Общее количество денег в банке:</b> {total_balance:.2f} лева.\n"
 
-        if USE_TABLE:
-            table = PrettyTable()
-            table.field_names = ["Имя", "buy", "quit", "diff"]
-
-            for username, stats in player_stats.items():
-                balance = stats["quit"] - stats["buyin"]
-                table.add_row(
-                    [
-                        username,
-                        f"{stats['buyin']:.2f}",
-                        f"{stats['quit']:.2f}",
-                        f"{balance:.2f}",
-                    ]
-                )
-
-            summary_text += f"<pre>{table}</pre>"
-            return summary_text
-        else:
-            for username, stats in player_stats.items():
-                balance = stats["quit"] - stats["buyin"]
-                summary_text += (
-                    f"{username}: закупился на {stats['buyin']:.2f} лева, "
-                    f"вышел на {stats['quit']:.2f} лева, разница: {balance:.2f} лева\n"
-                )
-            summary_text += (
-                f"\nОбщее количество денег в банке: {total_balance:.2f} лева.\n"
-            )
-
-            return summary_text
+        return summary_text
