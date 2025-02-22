@@ -183,6 +183,27 @@ class PlayerActions:
 
     @staticmethod
     @restrict_to_channel
+    async def quit_with_args(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        Обрабатывает команду "выход <число>".
+        """
+        # Извлекаем текст сообщения
+        message_text = update.message.text
+
+        # Разделяем текст на команду и аргумент
+        try:
+            _, chips_arg = message_text.split(maxsplit=1)
+            chips_left = int(chips_arg)
+        except (ValueError, IndexError):
+            await update.message.reply_text("Ошибка: Укажите количество фишек. Пример: выход 1500")
+            return
+
+        # Передаём аргумент в context.args и вызываем основной метод quit
+        context.args = [chips_left]
+        await PlayerActions.quit(update, context)
+
+    @staticmethod
+    @restrict_to_channel
     async def log(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
         
