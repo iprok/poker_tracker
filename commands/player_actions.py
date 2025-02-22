@@ -16,7 +16,7 @@ from config import (
     SHOW_SUMMARY_ON_BUYIN,
     SHOW_SUMMARY_ON_QUIT,
     LOG_AMOUNT_LAST_GAMES,
-    LOG_AMOUNT_LAST_ACTIONS
+    LOG_AMOUNT_LAST_ACTIONS,
 )
 from decorators import restrict_to_channel
 from prettytable import PrettyTable
@@ -195,7 +195,9 @@ class PlayerActions:
             _, chips_arg = message_text.split(maxsplit=1)
             chips_left = int(chips_arg)
         except (ValueError, IndexError):
-            await update.message.reply_text("Ошибка: Укажите количество фишек. Пример: выход 1500")
+            await update.message.reply_text(
+                "Ошибка: Укажите количество фишек. Пример: выход 1500"
+            )
             return
 
         # Передаём аргумент в context.args и вызываем основной метод quit
@@ -206,15 +208,17 @@ class PlayerActions:
     @restrict_to_channel
     async def log(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
-        
+
         # Получаем последние записи, ограниченные конфигом
         actions = (
             session.query(PlayerAction)
-            .order_by(PlayerAction.timestamp.desc())  # Сортируем по времени (последние сначала)
+            .order_by(
+                PlayerAction.timestamp.desc()
+            )  # Сортируем по времени (последние сначала)
             .limit(LOG_AMOUNT_LAST_ACTIONS)  # Ограничиваем количество записей
             .all()
         )
-        
+
         log_text = f"Лог последних {LOG_AMOUNT_LAST_ACTIONS} действий:\n"
         for action in actions:
             formatted_timestamp = format_datetime(action.timestamp)
@@ -223,9 +227,9 @@ class PlayerActions:
                 f"{formatted_timestamp}: {action.username} - {action.action} "
                 f"({action.chips} фишек, {amount} лева)\n"
             )
-        
+
         session.close()
-    
+
         # Отправляем сообщение
         await update.message.reply_text(log_text)
 
@@ -256,7 +260,9 @@ class PlayerActions:
         summary_text = f"<pre>Сводка последних {LOG_AMOUNT_LAST_GAMES} игр</pre>"
         for game in games:
             actions = PlayerActionRepository(session).find_actions_by_game(game.id)
-            summary_text += await PlayerActions.summary_formatter(actions, game, context)
+            summary_text += await PlayerActions.summary_formatter(
+                actions, game, context
+            )
 
         await update.message.reply_text(summary_text, parse_mode="HTML")
         session.close()
@@ -280,7 +286,9 @@ class PlayerActions:
         await update.message.reply_text(help_text)
 
     @staticmethod
-    async def summary_formatter(actions, game, context: ContextTypes.DEFAULT_TYPE) -> str:
+    async def summary_formatter(
+        actions, game, context: ContextTypes.DEFAULT_TYPE
+    ) -> str:
         """
         Форматирует сводку игры, группируя игроков по их балансу:
         - Должны банку (отрицательный баланс).
@@ -294,7 +302,7 @@ class PlayerActions:
         # Собираем статистику по игрокам
         for action in actions:
             user_info = await get_user_info(action.user_id, context)
-            
+
             if user_info not in player_stats:
                 player_stats[user_info] = {"buyin": 0, "quit": 0}
 
@@ -310,7 +318,9 @@ class PlayerActions:
         players_with_balance = []
         for username, stats in player_stats.items():
             balance = stats["quit"] - stats["buyin"]
-            players_with_balance.append((username, balance, abs(balance)))  # (имя, баланс, |баланс|)
+            players_with_balance.append(
+                (username, balance, abs(balance))
+            )  # (имя, баланс, |баланс|)
 
         # Сортируем игроков по абсолютному значению баланса (от большего к меньшему)
         players_with_balance.sort(key=lambda x: x[2], reverse=True)
@@ -329,7 +339,9 @@ class PlayerActions:
                 balanced.append((username, balance))
 
         # Формируем текст сводки
-        summary_text = f"Статистика игры за {format_datetime_to_date(game.start_time)}:\n\n"
+        summary_text = (
+            f"Статистика игры за {format_datetime_to_date(game.start_time)}:\n\n"
+        )
 
         # Должны банку
         if debtors:
@@ -354,6 +366,8 @@ class PlayerActions:
 
         # Общий баланс
         total_balance = total_buyin - total_quit
-        summary_text += f"💼 <b>Общее количество денег в банке:</b> {total_balance:.2f} лева.\n"
+        summary_text += (
+            f"💼 <b>Общее количество денег в банке:</b> {total_balance:.2f} лева.\n"
+        )
 
         return summary_text
