@@ -1,5 +1,5 @@
 services:
-  adminer:
+  poker_adminer:
     build: .
     environment:
       ADMINER_PLUGINS: login-env-vars
