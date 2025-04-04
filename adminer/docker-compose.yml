@@ -1,0 +1,28 @@
+services:
+  adminer:
+    build: .
+    environment:
+      ADMINER_PLUGINS: login-env-vars
+      # Without loading other plugins you can choose one of these:
+      # Format: driver_name -> db_name
+      # - server -> MySQL
+      # - sqlite -> SQLite3
+      # - sqlite2 -> SQLite2
+      # - pgsql -> PostgreSQL
+      # - oracle -> Oracle (beta)
+      # - mssql -> MS SQL (beta)
+      # - mongo -> MongoDB (alpha)
+      # - elastic -> Elasticsearch (beta)
+      ADMINER_DRIVER: sqlite
+      ADMINER_SERVER: server_host
+      ADMINER_USERNAME: username
+      ADMINER_PASSWORD:
+      ADMINER_DB: /db
+    ports:
+      - "127.0.0.1:8083:8080"
+    volumes:
+      - type: bind
+        source: ../poker_bot.db
+        target: /db
+        read_only: true
+
