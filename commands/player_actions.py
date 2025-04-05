@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from domain.entity.game import Game
 from domain.entity.player_action import PlayerAction
 from domain.service.message_sender import MessageSender
+from domain.service.permission_checker import PermissionChecker
 from telegram import (
     Update,
     ReplyKeyboardMarkup,
@@ -29,7 +30,6 @@ from config import (
 )
 from decorators import restrict_to_members, restrict_to_members_and_private
 from prettytable import PrettyTable
-from config import CHANNEL_ID, BOT_ID
 import re
 
 
@@ -316,7 +316,7 @@ class PlayerActions:
         )
 
         chat_id = update.effective_chat.id
-        if chat_id == BOT_ID:
+        if await PermissionChecker.check_is_chat_private(update, context):
             help_text += (
                 "/quit <фишки> - Выйти из игры, указав количество оставшихся фишек.\n"
                 "/startgame - Начать новую игру.\n\n"
@@ -417,7 +417,9 @@ class PlayerActions:
         # Определяем, откуда пришло сообщение
         chat_id = update.effective_chat.id
 
-        if chat_id == CHANNEL_ID:  # Если это группа
+        if (
+            await PermissionChecker.check_is_chat_private(update, context) == False
+        ):  # Если это группа
             keyboard = [
                 [KeyboardButton("/summary"), KeyboardButton("/summarygames")],
                 [KeyboardButton("/log"), KeyboardButton("/help")],

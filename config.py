@@ -5,7 +5,6 @@ with open("config.json", "r") as file:
 
 BOT_TOKEN = config["bot_token"]
 CHANNEL_ID = config["channel_id"]
-BOT_ID = config["bot_id"]
 CHIP_VALUE = config["chip_value"]
 CHIP_COUNT = config["chip_count"]
 TIMEZONE = config["timezone"]
