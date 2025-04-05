@@ -6,14 +6,14 @@ from domain.entity.player_action import PlayerAction
 from domain.repository.game_repository import GameRepository
 from domain.repository.player_action_repository import PlayerActionRepository
 from telegram.ext import ContextTypes
-from decorators import restrict_to_bot
+from decorators import restrict_to_members_and_private
 from config import CHANNEL_ID
 
 
 class GameManagement:
 
     @staticmethod
-    @restrict_to_bot
+    @restrict_to_members_and_private
     async def start_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
 
@@ -55,7 +55,7 @@ class GameManagement:
         await context.bot.send_message(CHANNEL_ID, "Игра начата! Закупки открыты.")
 
     @staticmethod
-    @restrict_to_bot
+    @restrict_to_members_and_private
     async def end_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
         current_game = GameRepository(session).find_active_game()

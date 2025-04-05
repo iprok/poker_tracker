@@ -27,7 +27,7 @@ from config import (
     LOG_AMOUNT_LAST_GAMES,
     LOG_AMOUNT_LAST_ACTIONS,
 )
-from decorators import restrict_to_all, restrict_to_bot
+from decorators import restrict_to_members, restrict_to_members_and_private
 from prettytable import PrettyTable
 from config import CHANNEL_ID, BOT_ID
 import re
@@ -36,7 +36,7 @@ import re
 class PlayerActions:
 
     @staticmethod
-    @restrict_to_bot
+    @restrict_to_members_and_private
     async def buyin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
         current_game_id = context.bot_data.get("current_game_id")
@@ -90,7 +90,7 @@ class PlayerActions:
             await PlayerActions.summary(update, context)
 
     @staticmethod
-    @restrict_to_bot
+    @restrict_to_members_and_private
     async def quit(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
         current_game_id = context.bot_data.get("current_game_id")
@@ -213,7 +213,7 @@ class PlayerActions:
             await PlayerActions.summary(update, context)
 
     @staticmethod
-    @restrict_to_all
+    @restrict_to_members
     async def quit_with_args(update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
         Обрабатывает команду "выход <число>".
@@ -236,7 +236,7 @@ class PlayerActions:
         await PlayerActions.quit(update, context)
 
     @staticmethod
-    @restrict_to_all
+    @restrict_to_members
     async def log(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
 
@@ -265,12 +265,14 @@ class PlayerActions:
         await MessageSender.send_to_current_channel(update, context, log_text)
 
     @staticmethod
-    @restrict_to_all
+    @restrict_to_members
     async def summary(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
         current_game_id = context.bot_data.get("current_game_id")
         if current_game_id is None:
-            await MessageSender.send_to_current_channel(update, context, "Игра не начата.")
+            await MessageSender.send_to_current_channel(
+                update, context, "Игра не начата."
+            )
             session.close()
             return
 
@@ -285,7 +287,7 @@ class PlayerActions:
         session.close()
 
     @staticmethod
-    @restrict_to_all
+    @restrict_to_members
     async def summarygames(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
         games = GameRepository(session).get_games_by_limit(LOG_AMOUNT_LAST_GAMES)
@@ -303,7 +305,7 @@ class PlayerActions:
         session.close()
 
     @staticmethod
-    @restrict_to_all
+    @restrict_to_members
     async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         help_text = (
             "Список команд:\n"
@@ -440,6 +442,8 @@ class PlayerActions:
             update, context, "Меню закрыто", reply_markup=ReplyKeyboardRemove()
         )
 
+    @staticmethod
+    @restrict_to_members_and_private
     async def handle_quit_button(update, context):
         keyboard = []
         row = []
@@ -457,6 +461,8 @@ class PlayerActions:
             update, context, "Выберите сумму вывода:", reply_markup=reply_markup
         )
 
+    @staticmethod
+    @restrict_to_members_and_private
     async def handle_quit_command(update, context):
         match = re.search(r"(?:@\w+\s+)?/quit\s+(\d+)", update.message.text)
         if match:
@@ -481,6 +487,8 @@ class PlayerActions:
                 reply_markup=reply_markup,
             )
 
+    @staticmethod
+    @restrict_to_members_and_private
     async def handle_confirmation(update, context):
         if "pending_quit_amount" in context.user_data:
             amount = context.user_data["pending_quit_amount"]
