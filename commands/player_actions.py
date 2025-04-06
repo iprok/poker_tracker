@@ -257,7 +257,7 @@ class PlayerActions:
             chips_left = int(chips_arg)
 
             # Передаём аргумент в context.args и вызываем основной метод quit
-            context.args = [chips_left]
+            context.args = [str(chips_left)]
             await PlayerActions.quit(update, context)
 
         except (ValueError, IndexError):
@@ -283,7 +283,7 @@ class PlayerActions:
 
         log_text = f"Лог последних {LOG_AMOUNT_LAST_ACTIONS} действий:\n"
         for action in actions:
-            formatted_timestamp = format_datetime(action.timestamp)
+            formatted_timestamp = format_datetime(action.timestamp)  # type: ignore
             amount = f"{action.amount:.2f}" if action.amount is not None else "None"
             log_text += (
                 f"{formatted_timestamp}: {action.username} - {action.action} "
@@ -348,7 +348,6 @@ class PlayerActions:
             "/help - Показать это сообщение.\n\n"
         )
 
-        chat_id = update.effective_chat.id
         if await PermissionChecker.check_is_chat_private(update, context):
             help_text += (
                 "/quit <фишки> - Выйти из игры, указав количество оставшихся фишек.\n"
@@ -457,10 +456,8 @@ class PlayerActions:
     @restrict_to_members
     async def show_menu(update, context):
         # Определяем, откуда пришло сообщение
-        chat_id = update.effective_chat.id
-
-        if (
-            await PermissionChecker.check_is_chat_private(update, context) == False
+        if not await PermissionChecker.check_is_chat_private(
+            update, context
         ):  # Если это группа
             keyboard = [
                 [KeyboardButton("/summary"), KeyboardButton("/summarygames")],
