@@ -1,15 +1,34 @@
 from telegram import Update
-from config import CHANNEL_ID
+from domain.service.permission_checker import PermissionChecker
 
 
-# Декоратор для ограничения команд только указанным каналом
-def restrict_to_channel(func):
+# Декоратор для ограничения команд только пользователями в канале
+def restrict_to_members(func):
     async def wrapper(update: Update, context):
-        if update.effective_chat.id != CHANNEL_ID:
-            await update.message.reply_text(
-                "Команды обрабатываются только в указанном канале."
-            )
+        if await PermissionChecker.check_is_group_member(update, context):
+            await func(update, context)
             return
-        return await func(update, context)
+
+        await update.message.reply_text(
+            "Эта команда обрабатывается только в участниками группы."
+        )
+        return
+
+    return wrapper
+
+
+# Декоратор для ограничения команд только пользователями в канале + приватный чат с ботом
+def restrict_to_members_and_private(func):
+    async def wrapper(update: Update, context):
+        if await PermissionChecker.check_is_group_member(
+            update, context
+        ) and await PermissionChecker.check_is_chat_private(update, context):
+            await func(update, context)
+            return
+
+        await update.message.reply_text(
+            "Эта команда обрабатывается только в канале бота или участниками группы."
+        )
+        return
 
     return wrapper

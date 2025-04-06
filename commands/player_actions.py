@@ -1,7 +1,17 @@
 from datetime import datetime, timezone
 from domain.entity.game import Game
 from domain.entity.player_action import PlayerAction
-from telegram import Update
+from domain.service.message_sender import MessageSender
+from domain.service.permission_checker import PermissionChecker
+from telegram import (
+    Update,
+    ReplyKeyboardMarkup,
+    KeyboardButton,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    ReplyKeyboardRemove,
+    ForceReply,
+)
 from telegram.ext import ContextTypes
 from sqlalchemy import desc, or_
 from sqlalchemy.sql import func
@@ -18,20 +28,24 @@ from config import (
     LOG_AMOUNT_LAST_GAMES,
     LOG_AMOUNT_LAST_ACTIONS,
 )
-from decorators import restrict_to_channel
+from decorators import restrict_to_members, restrict_to_members_and_private
 from prettytable import PrettyTable
+import re
 
 
 class PlayerActions:
 
     @staticmethod
-    @restrict_to_channel
+    @restrict_to_members_and_private
     async def buyin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
         current_game_id = context.bot_data.get("current_game_id")
 
         if current_game_id is None:
-            await update.message.reply_text("Сначала начните игру командой /startgame.")
+            await MessageSender.send_to_current_channel(
+                update, context, "Сначала начните игру командой /startgame."
+            )
+
             session.close()
             return
 
@@ -62,28 +76,43 @@ class PlayerActions:
 
         session.close()
 
-        await update.message.reply_text(
+        buyin_text = (
             f"Закуп на {CHIP_COUNT} фишек ({CHIP_VALUE} лева) записан.\n"
             f"Вы уже закупились {buyin_count} раз(а) на общую сумму {buyin_total:.2f} лева в этой игре."
+        )
+
+        await MessageSender.send_to_current_channel(update, context, buyin_text)
+
+        user_info = await get_user_info(user.id, context)
+
+        await MessageSender.send_to_channel(
+            update,
+            context,
+            f"<b>{user_info} (@{update.effective_user.username})</b>: " + buyin_text,
+            parse_mode="HTML",
         )
 
         if SHOW_SUMMARY_ON_BUYIN:
             await PlayerActions.summary(update, context)
 
     @staticmethod
-    @restrict_to_channel
+    @restrict_to_members_and_private
     async def quit(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
         current_game_id = context.bot_data.get("current_game_id")
 
         if current_game_id is None:
-            await update.message.reply_text("Сначала начните игру командой /startgame.")
+            await MessageSender.send_to_current_channel(
+                update, context, "Сначала начните игру командой /startgame."
+            )
             session.close()
             return
 
         if not context.args:
-            await update.message.reply_text(
-                "Ошибка: Вы не указали количество фишек. Пример: /quit 1500"
+            await MessageSender.send_to_current_channel(
+                update,
+                context,
+                "Ошибка: Вы не указали количество фишек. Пример: /quit 1500",
             )
             session.close()
             return
@@ -93,8 +122,10 @@ class PlayerActions:
         # Проверяем кратность
         step = CHIP_COUNT / CHIP_VALUE
         if chips_left % step != 0:
-            await update.message.reply_text(
-                f"Ошибка: Количество фишек должно быть кратно {int(step)}."
+            await MessageSender.send_to_current_channel(
+                update,
+                context,
+                f"Ошибка: Количество фишек должно быть кратно {int(step)}.",
             )
             session.close()
             return
@@ -118,15 +149,18 @@ class PlayerActions:
         max_chips = total_buyins - total_quits
 
         if chips_left < 0:
-            await update.message.reply_text(
-                "Ошибка: Количество фишек не может быть меньше 0."
+            await MessageSender.send_to_current_channel(
+                update, context, "Ошибка: Количество фишек не может быть меньше 0."
             )
+
             session.close()
             return
 
         if chips_left > max_chips:
-            await update.message.reply_text(
-                f"Ошибка: Количество фишек не может быть больше доступных в банке: {max_chips}."
+            await MessageSender.send_to_current_channel(
+                update,
+                context,
+                f"Ошибка: Количество фишек не может быть больше доступных в банке: {max_chips}.",
             )
             session.close()
             return
@@ -173,16 +207,32 @@ class PlayerActions:
         session.close()
 
         quit_text = (
+            f"@{update.effective_user.username} - Выход записан. У вас осталось {chips_left} фишек, что эквивалентно {int(amount)} лева.\n"
+            f"До этого закупов от вас было на {int(user_buyins)} лв, выходов - на {int(user_quits)}лв.\n{balance_message}\n\n"
+        )
+        await MessageSender.send_to_current_channel(
+            update, context, quit_text, reply_markup=ReplyKeyboardRemove()
+        )
+
+        quit_text = (
             f"Выход записан. У вас осталось {chips_left} фишек, что эквивалентно {int(amount)} лева.\n"
             f"До этого закупов от вас было на {int(user_buyins)} лв, выходов - на {int(user_quits)}лв.\n{balance_message}\n\n"
         )
-        await update.message.reply_text(quit_text)
+
+        user_info = await get_user_info(user.id, context)
+
+        await MessageSender.send_to_channel(
+            update,
+            context,
+            f"<b>{user_info} (@{update.effective_user.username})</b>: " + quit_text,
+            parse_mode="HTML",
+        )
 
         if SHOW_SUMMARY_ON_QUIT:
             await PlayerActions.summary(update, context)
 
     @staticmethod
-    @restrict_to_channel
+    @restrict_to_members
     async def quit_with_args(update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
         Обрабатывает команду "выход <число>".
@@ -195,8 +245,8 @@ class PlayerActions:
             _, chips_arg = message_text.split(maxsplit=1)
             chips_left = int(chips_arg)
         except (ValueError, IndexError):
-            await update.message.reply_text(
-                "Ошибка: Укажите количество фишек. Пример: выход 1500"
+            await MessageSender.send_to_current_channel(
+                update, context, "Ошибка: Укажите количество фишек. Пример: выход 1500"
             )
             return
 
@@ -205,7 +255,7 @@ class PlayerActions:
         await PlayerActions.quit(update, context)
 
     @staticmethod
-    @restrict_to_channel
+    @restrict_to_members
     async def log(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
 
@@ -231,15 +281,17 @@ class PlayerActions:
         session.close()
 
         # Отправляем сообщение
-        await update.message.reply_text(log_text)
+        await MessageSender.send_to_current_channel(update, context, log_text)
 
     @staticmethod
-    @restrict_to_channel
+    @restrict_to_members
     async def summary(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
         current_game_id = context.bot_data.get("current_game_id")
         if current_game_id is None:
-            await update.message.reply_text("Игра не начата.")
+            await MessageSender.send_to_current_channel(
+                update, context, "Игра не начата."
+            )
             session.close()
             return
 
@@ -247,12 +299,14 @@ class PlayerActions:
         actions = PlayerActionRepository(session).find_actions_by_game(game.id)
         summary_text = await PlayerActions.summary_formatter(actions, game, context)
 
-        await update.message.reply_text(summary_text, parse_mode="HTML")
+        await MessageSender.send_to_current_channel(
+            update, context, summary_text, parse_mode="HTML"
+        )
 
         session.close()
 
     @staticmethod
-    @restrict_to_channel
+    @restrict_to_members
     async def summarygames(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
         games = GameRepository(session).get_games_by_limit(LOG_AMOUNT_LAST_GAMES)
@@ -264,26 +318,34 @@ class PlayerActions:
                 actions, game, context
             )
 
-        await update.message.reply_text(summary_text, parse_mode="HTML")
+            summary_text += "\n\n"
+
+        await MessageSender.send_to_current_channel(
+            update, context, summary_text, parse_mode="HTML"
+        )
         session.close()
 
     @staticmethod
-    @restrict_to_channel
+    @restrict_to_members
     async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         help_text = (
             "Список команд:\n"
             "/summary - Показать сводку текущей игры.\n"
             "/summarygames - Показать сводку последних игр.\n"
             "/log - Показать лог всех действий.\n"
-            "/выход <фишки> - Выйти из игры, указав количество оставшихся фишек.\n"
-            "/quit <фишки> - Выйти из игры, указав количество оставшихся фишек.\n"
             "/help - Показать это сообщение.\n\n"
-            "/startgame - Начать новую игру.\n\n"
-            "/закуп - Закупить фишки.\n"
-            "/buyin - Закупить фишки.\n\n"
-            "/endgame - Завершить текущую игру.\n"
         )
-        await update.message.reply_text(help_text)
+
+        chat_id = update.effective_chat.id
+        if await PermissionChecker.check_is_chat_private(update, context):
+            help_text += (
+                "/quit <фишки> - Выйти из игры, указав количество оставшихся фишек.\n"
+                "/startgame - Начать новую игру.\n\n"
+                "/buyin - Закупить фишки.\n\n"
+                "/endgame - Завершить текущую игру.\n"
+            )
+
+        await MessageSender.send_to_current_channel(update, context, help_text)
 
     @staticmethod
     async def summary_formatter(
@@ -340,7 +402,8 @@ class PlayerActions:
 
         # Формируем текст сводки
         summary_text = (
-            f"Статистика игры за {format_datetime_to_date(game.start_time)}:\n\n"
+            f"<u>Статистика игры за </u>\n"
+            f"<u>📅 {format_datetime_to_date(game.start_time)}</u>:\n\n"
         )
 
         # Должны банку
@@ -370,4 +433,121 @@ class PlayerActions:
             f"💼 <b>Общее количество денег в банке:</b> {total_balance:.2f} лева.\n"
         )
 
-        return summary_text
+        # Используем метод get_duration из класса Game
+        summary_with_duration = (
+            f"{summary_text}\n"
+            f"⏱️ <b>Продолжительность игры:</b> {game.get_duration()}\n"
+        )
+
+        return summary_with_duration
+
+    @staticmethod
+    @restrict_to_members
+    async def show_menu(update, context):
+        # Определяем, откуда пришло сообщение
+        chat_id = update.effective_chat.id
+
+        if (
+            await PermissionChecker.check_is_chat_private(update, context) == False
+        ):  # Если это группа
+            keyboard = [
+                [KeyboardButton("/summary"), KeyboardButton("/summarygames")],
+                [KeyboardButton("/log"), KeyboardButton("/help")],
+            ]
+        else:  # Если это личный чат с ботом
+            keyboard = [
+                [KeyboardButton("/startgame"), KeyboardButton("/endgame")],
+                [KeyboardButton("/buyin")],
+                [KeyboardButton("/startexit")],
+                [KeyboardButton("/summary"), KeyboardButton("/summarygames")],
+                [KeyboardButton("/log"), KeyboardButton("/help")],
+                [KeyboardButton("/close_menu")],
+            ]
+
+        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        await MessageSender.send_to_current_channel(
+            update, context, "Выберите действие:", reply_markup=reply_markup
+        )
+
+    @staticmethod
+    @restrict_to_members
+    async def close_menu(update, context):
+        await MessageSender.send_to_current_channel(
+            update, context, "Меню закрыто", reply_markup=ReplyKeyboardRemove()
+        )
+
+    @staticmethod
+    @restrict_to_members_and_private
+    async def handle_quit_button(update, context):
+        keyboard = []
+        row = []
+        for amount in range(0, 30001, 1500):
+            row.append(KeyboardButton(f"/quit {amount}"))
+            if len(row) == 2:
+                keyboard.append(row)
+                row = []
+
+        if row:
+            row.append(KeyboardButton("/menu"))
+            keyboard.append(row)
+
+        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        await MessageSender.send_to_current_channel(
+            update, context, "Выберите сумму вывода:", reply_markup=reply_markup
+        )
+
+    @staticmethod
+    @restrict_to_members_and_private
+    async def handle_quit_command(update, context):
+        match = re.search(r"(?:@\w+\s+)?/quit\s+(\d+)", update.message.text)
+        if match:
+            amount = float(match.group(1))
+
+            # Сохраняем сумму в контексте пользователя для подтверждения
+            context.user_data["pending_quit_amount"] = amount
+
+            # Создаем клавиатуру подтверждения
+            confirm_keyboard = [
+                [
+                    KeyboardButton(f"Да, вывести {int(amount)}"),
+                    KeyboardButton("Нет, отменить"),
+                ],
+            ]
+            reply_markup = ReplyKeyboardMarkup(confirm_keyboard, resize_keyboard=True)
+
+            await MessageSender.send_to_current_channel(
+                update,
+                context,
+                f"Вы уверены, что хотите вывести {int(amount)}?",
+                reply_markup=reply_markup,
+            )
+
+    @staticmethod
+    @restrict_to_members_and_private
+    async def handle_confirmation(update, context):
+        if "pending_quit_amount" in context.user_data:
+            amount = context.user_data["pending_quit_amount"]
+
+            if "Да, вывести" in update.message.text:
+                # Устанавливаем аргументы для команды quit
+                context.args = [amount]
+                await PlayerActions.quit(update, context)
+
+                # Очищаем временные данные
+                del context.user_data["pending_quit_amount"]
+
+                # Возвращаем основное меню
+                await PlayerActions.show_menu(update, context)
+            elif "Нет, отменить" in update.message.text:
+                await MessageSender.send_to_current_channel(
+                    update,
+                    context,
+                    "Отмена вывода. Выберите новую сумму или другое действие.",
+                    reply_markup=ReplyKeyboardRemove(),
+                )
+                await PlayerActions.show_menu(update, context)
+                del context.user_data["pending_quit_amount"]
+        else:
+            await MessageSender.send_to_current_channel(
+                update, context, "Не найдено ожидающих подтверждения действий."
+            )
