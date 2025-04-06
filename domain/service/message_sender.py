@@ -6,8 +6,8 @@ from telegram.ext import ContextTypes
 class MessageSender:
 
     @staticmethod
-    def send_to_channel(update: Update, context: ContextTypes.DEFAULT_TYPE, text):
-        return context.bot.send_message(CHANNEL_ID, text)
+    def send_to_channel(update: Update, context: ContextTypes.DEFAULT_TYPE, text, parse_mode=None):
+        return context.bot.send_message(CHANNEL_ID, text, parse_mode=parse_mode)
 
     @staticmethod
     def send_to_current_channel(

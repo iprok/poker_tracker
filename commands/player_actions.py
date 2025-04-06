@@ -82,8 +82,12 @@ class PlayerActions:
         )
 
         await MessageSender.send_to_current_channel(update, context, buyin_text)
+
+        user_info = await get_user_info(user.id, context)
+
         await MessageSender.send_to_channel(
-            update, context, f"@{update.effective_user.username}: " + buyin_text
+            update, context, f"<b>{user_info} (@{update.effective_user.username})</b>: " + buyin_text,
+            parse_mode="HTML"
         )
 
         if SHOW_SUMMARY_ON_BUYIN:
@@ -207,7 +211,18 @@ class PlayerActions:
         await MessageSender.send_to_current_channel(
             update, context, quit_text, reply_markup=ReplyKeyboardRemove()
         )
-        await MessageSender.send_to_channel(update, context, quit_text)
+
+        quit_text = (
+            f"Выход записан. У вас осталось {chips_left} фишек, что эквивалентно {int(amount)} лева.\n"
+            f"До этого закупов от вас было на {int(user_buyins)} лв, выходов - на {int(user_quits)}лв.\n{balance_message}\n\n"
+        )
+
+        user_info = await get_user_info(user.id, context)
+
+        await MessageSender.send_to_channel(
+            update, context, f"<b>{user_info} (@{update.effective_user.username})</b>: " + quit_text,
+            parse_mode="HTML"
+        )
 
         if SHOW_SUMMARY_ON_QUIT:
             await PlayerActions.summary(update, context)
