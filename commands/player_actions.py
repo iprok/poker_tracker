@@ -299,6 +299,8 @@ class PlayerActions:
                 actions, game, context
             )
 
+            summary_text += "\n\n"
+
         await MessageSender.send_to_current_channel(
             update, context, summary_text, parse_mode="HTML"
         )
@@ -381,7 +383,7 @@ class PlayerActions:
 
         # Формируем текст сводки
         summary_text = (
-            f"Статистика игры за {format_datetime_to_date(game.start_time)}:\n\n"
+            f"<u>Статистика игры за 📅 {format_datetime_to_date(game.start_time)}</u>:\n\n"
         )
 
         # Должны банку
@@ -411,7 +413,13 @@ class PlayerActions:
             f"💼 <b>Общее количество денег в банке:</b> {total_balance:.2f} лева.\n"
         )
 
-        return summary_text
+        # Используем метод get_duration из класса Game
+        summary_with_duration = (
+            f"{summary_text}\n"
+            f"⏱️ <b>Продолжительность игры:</b> {game.get_duration()}\n"
+        )
+
+        return summary_with_duration
 
     async def show_menu(update, context):
         # Определяем, откуда пришло сообщение

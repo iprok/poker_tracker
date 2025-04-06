@@ -9,5 +9,15 @@ class Game(Base):
     start_time = Column(DateTime, default=datetime.utcnow)
     end_time = Column(DateTime, nullable=True)
 
+    def get_duration(self):
+        """Возвращает продолжительность игры в формате 'HH:MM:SS'"""
+        end_time = self.end_time if self.end_time else datetime.utcnow()
+        duration = end_time - self.start_time
+        total_seconds = int(duration.total_seconds())
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        seconds = total_seconds % 60
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
 
 Base.metadata.create_all(Engine)
