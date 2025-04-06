@@ -19,7 +19,8 @@ class GameManagement:
 
         # Проверяем, есть ли незавершённая игра в базе данных
         if "current_game_id" in context.bot_data:
-            await update.message.reply_text("Игра уже начата!")
+            if update.message:
+                await update.message.reply_text("Игра уже начата!")
             session.close()
             return
 
@@ -27,9 +28,10 @@ class GameManagement:
 
         if current_game:
             context.bot_data["current_game_id"] = current_game.id
-            await update.message.reply_text(
-                "Игра уже начата! Это восстановленная игра."
-            )
+            if update.message:
+                await update.message.reply_text(
+                    "Игра уже начата! Это восстановленная игра."
+                )
             session.close()
             return
 
@@ -40,18 +42,20 @@ class GameManagement:
         context.bot_data["current_game_id"] = new_game.id
 
         # Логируем старт игры
-        action = PlayerAction(
-            game_id=new_game.id,
-            user_id=update.effective_user.id,
-            username=update.effective_user.username,
-            action="start_game",
-            timestamp=datetime.now(timezone.utc),
-        )
+        if update.effective_user:
+            action = PlayerAction(
+                game_id=new_game.id,
+                user_id=update.effective_user.id,
+                username=update.effective_user.username,
+                action="start_game",
+                timestamp=datetime.now(timezone.utc),
+            )
 
-        PlayerActionRepository(session).save(action)
+            PlayerActionRepository(session).save(action)
 
         session.close()
-        await update.message.reply_text("Игра начата! Закупки открыты.")
+        if update.message:
+            await update.message.reply_text("Игра начата! Закупки открыты.")
         await context.bot.send_message(CHANNEL_ID, "Игра начата! Закупки открыты.")
 
     @staticmethod
@@ -60,27 +64,30 @@ class GameManagement:
         session = Session()
         current_game = GameRepository(session).find_active_game()
         if not current_game:
-            await update.message.reply_text("Игра не начата.")
+            if update.message:
+                await update.message.reply_text("Игра не начата.")
             session.close()
             return
 
-        current_game.end_time = datetime.now(timezone.utc)
+        current_game.end_time = datetime.now(timezone.utc)  # type: ignore
         GameRepository(session).save(current_game)
 
         # Удаляем текущий game_id из контекста
         context.bot_data.pop("current_game_id", None)
 
         # Логируем завершение игры
-        action = PlayerAction(
-            game_id=current_game.id,
-            user_id=update.effective_user.id,
-            username=update.effective_user.username,
-            action="end_game",
-            timestamp=datetime.now(timezone.utc),
-        )
-        PlayerActionRepository(session).save(action)
+        if update.effective_user:
+            action = PlayerAction(
+                game_id=current_game.id,
+                user_id=update.effective_user.id,
+                username=update.effective_user.username,
+                action="end_game",
+                timestamp=datetime.now(timezone.utc),
+            )
+            PlayerActionRepository(session).save(action)
 
         session.close()
-        await update.message.reply_text("Игра завершена.")
+        if update.message:
+            await update.message.reply_text("Игра завершена.")
 
         await context.bot.send_message(CHANNEL_ID, "Игра завершена.")

@@ -5,7 +5,6 @@ from telegram.ext import (
     CommandHandler,
     MessageHandler,
     filters,
-    CallbackQueryHandler,
 )
 from telegram import BotCommandScopeChat, BotCommandScopeAllPrivateChats
 from commands.game_management import GameManagement
@@ -57,7 +56,7 @@ def run_bot():
                 commands=[("menu", "Показать меню команд")],
                 scope=BotCommandScopeChat(chat_id=CHANNEL_ID),
             )
-        except Exception as e:
+        except Exception:
             await application.bot.delete_my_commands()
 
         await application.bot.set_my_commands(

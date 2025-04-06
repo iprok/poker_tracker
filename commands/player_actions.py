@@ -7,13 +7,9 @@ from telegram import (
     Update,
     ReplyKeyboardMarkup,
     KeyboardButton,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
     ReplyKeyboardRemove,
-    ForceReply,
 )
 from telegram.ext import ContextTypes
-from sqlalchemy import desc, or_
 from sqlalchemy.sql import func
 from engine import Session
 from domain.repository.game_repository import GameRepository
@@ -22,14 +18,12 @@ from utils import format_datetime, format_datetime_to_date, get_user_info
 from config import (
     CHIP_VALUE,
     CHIP_COUNT,
-    USE_TABLE,
     SHOW_SUMMARY_ON_BUYIN,
     SHOW_SUMMARY_ON_QUIT,
     LOG_AMOUNT_LAST_GAMES,
     LOG_AMOUNT_LAST_ACTIONS,
 )
 from decorators import restrict_to_members, restrict_to_members_and_private
-from prettytable import PrettyTable
 import re
 
 
@@ -47,6 +41,10 @@ class PlayerActions:
             )
 
             session.close()
+            return
+
+        if not update.effective_user:
+            print("ERROR: buyin: no user information")
             return
 
         user = update.effective_user
@@ -71,8 +69,8 @@ class PlayerActions:
             .first()
         )
 
-        buyin_count = total_buyins[0] or 0
-        buyin_total = total_buyins[1] or 0.0
+        buyin_count = total_buyins[0] if total_buyins else 0
+        buyin_total = total_buyins[1] if total_buyins else 0.0
 
         session.close()
 
@@ -118,6 +116,10 @@ class PlayerActions:
             return
 
         chips_left = int(context.args[0])
+
+        if not update.effective_user:
+            print("ERROR: quit: no user information")
+            return
 
         # Проверяем кратность
         step = CHIP_COUNT / CHIP_VALUE
@@ -237,6 +239,15 @@ class PlayerActions:
         """
         Обрабатывает команду "выход <число>".
         """
+        if not update.message:
+            return
+
+        if not update.message.text:
+            await MessageSender.send_to_current_channel(
+                update, context, "Ошибка: Укажите количество фишек. Пример: выход 1500"
+            )
+            return
+
         # Извлекаем текст сообщения
         message_text = update.message.text
 
@@ -244,15 +255,16 @@ class PlayerActions:
         try:
             _, chips_arg = message_text.split(maxsplit=1)
             chips_left = int(chips_arg)
+
+            # Передаём аргумент в context.args и вызываем основной метод quit
+            context.args = [chips_left]
+            await PlayerActions.quit(update, context)
+
         except (ValueError, IndexError):
             await MessageSender.send_to_current_channel(
                 update, context, "Ошибка: Укажите количество фишек. Пример: выход 1500"
             )
             return
-
-        # Передаём аргумент в context.args и вызываем основной метод quit
-        context.args = [chips_left]
-        await PlayerActions.quit(update, context)
 
     @staticmethod
     @restrict_to_members
