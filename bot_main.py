@@ -62,7 +62,7 @@ def run_bot():
 
         await application.bot.set_my_commands(
             commands=[("menu", "Показать меню команд")],
-            scope=BotCommandScopeAllPrivateChats()
+            scope=BotCommandScopeAllPrivateChats(),
         )
 
     application.post_init = post_init

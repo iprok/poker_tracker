@@ -86,8 +86,10 @@ class PlayerActions:
         user_info = await get_user_info(user.id, context)
 
         await MessageSender.send_to_channel(
-            update, context, f"<b>{user_info} (@{update.effective_user.username})</b>: " + buyin_text,
-            parse_mode="HTML"
+            update,
+            context,
+            f"<b>{user_info} (@{update.effective_user.username})</b>: " + buyin_text,
+            parse_mode="HTML",
         )
 
         if SHOW_SUMMARY_ON_BUYIN:
@@ -220,8 +222,10 @@ class PlayerActions:
         user_info = await get_user_info(user.id, context)
 
         await MessageSender.send_to_channel(
-            update, context, f"<b>{user_info} (@{update.effective_user.username})</b>: " + quit_text,
-            parse_mode="HTML"
+            update,
+            context,
+            f"<b>{user_info} (@{update.effective_user.username})</b>: " + quit_text,
+            parse_mode="HTML",
         )
 
         if SHOW_SUMMARY_ON_QUIT:
@@ -398,7 +402,8 @@ class PlayerActions:
 
         # Формируем текст сводки
         summary_text = (
-            f"<u>Статистика игры за 📅 {format_datetime_to_date(game.start_time)}</u>:\n\n"
+            f"<u>Статистика игры за </u>\n"
+            f"<u>📅 {format_datetime_to_date(game.start_time)}</u>:\n\n"
         )
 
         # Должны банку

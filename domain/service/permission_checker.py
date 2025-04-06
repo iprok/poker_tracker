@@ -14,7 +14,7 @@ class PermissionChecker:
             if chat_member.status in [
                 ChatMemberStatus.MEMBER,
                 ChatMemberStatus.ADMINISTRATOR,
-                ChatMemberStatus.OWNER
+                ChatMemberStatus.OWNER,
             ]:
                 return True
 
