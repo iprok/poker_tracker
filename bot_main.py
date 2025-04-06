@@ -7,9 +7,10 @@ from telegram.ext import (
     filters,
     CallbackQueryHandler,
 )
+from telegram import BotCommandScopeChat, BotCommandScopeAllPrivateChats
 from commands.game_management import GameManagement
 from commands.player_actions import PlayerActions
-from config import BOT_TOKEN
+from config import BOT_TOKEN, CHANNEL_ID
 
 
 def run_bot():
@@ -50,10 +51,18 @@ def run_bot():
 
     # Показываем меню при старте бота
     async def post_init(application):
+        # Специальные команды только для участников канала
+        try:
+            await application.bot.set_my_commands(
+                commands=[("menu", "Показать меню команд")],
+                scope=BotCommandScopeChat(chat_id=CHANNEL_ID),
+            )
+        except Exception as e:
+            await application.bot.delete_my_commands()
+
         await application.bot.set_my_commands(
-            [
-                ("menu", "Показать меню команд"),
-            ]
+            commands=[("menu", "Показать меню команд")],
+            scope=BotCommandScopeAllPrivateChats()
         )
 
     application.post_init = post_init

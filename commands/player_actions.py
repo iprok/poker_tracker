@@ -436,6 +436,8 @@ class PlayerActions:
 
         return summary_with_duration
 
+    @staticmethod
+    @restrict_to_members
     async def show_menu(update, context):
         # Определяем, откуда пришло сообщение
         chat_id = update.effective_chat.id
@@ -462,6 +464,8 @@ class PlayerActions:
             update, context, "Выберите действие:", reply_markup=reply_markup
         )
 
+    @staticmethod
+    @restrict_to_members
     async def close_menu(update, context):
         await MessageSender.send_to_current_channel(
             update, context, "Меню закрыто", reply_markup=ReplyKeyboardRemove()
