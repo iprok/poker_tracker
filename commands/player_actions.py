@@ -479,6 +479,7 @@ class PlayerActions:
                 row = []
 
         if row:
+            row.append(KeyboardButton("/menu"))
             keyboard.append(row)
 
         reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
