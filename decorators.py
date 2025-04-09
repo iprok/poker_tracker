@@ -10,7 +10,7 @@ def restrict_to_members(func):
             return
 
         await update.message.reply_text(
-            "Эта команда обрабатывается только в участниками группы."
+            "Эта команда обрабатывается только участниками группы."
         )
         return
 

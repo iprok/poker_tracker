@@ -27,6 +27,13 @@ def run_bot():
         )
     )
 
+    # Обработчик кнопки "Начать завершение игры"
+    application.add_handler(
+        MessageHandler(
+            filters.Regex(r".*\/endgame.*"), GameManagement.handle_endgame_command
+        )
+    )
+
     # Обработчик команды /quit
     application.add_handler(
         MessageHandler(filters.Regex(r".*\/quit.*"), PlayerActions.handle_quit_command)
@@ -40,9 +47,15 @@ def run_bot():
         )
     )
 
+    application.add_handler(
+        MessageHandler(
+            filters.Regex(r"^(Да, завершить игру|Нет, продолжить играть)$"),
+            GameManagement.handle_confirmation,
+        )
+    )
+
     # Регистрация других команд
     application.add_handler(CommandHandler("startgame", GameManagement.start_game))
-    application.add_handler(CommandHandler("endgame", GameManagement.end_game))
     application.add_handler(CommandHandler("buyin", PlayerActions.buyin))
     application.add_handler(CommandHandler("summary", PlayerActions.summary))
     application.add_handler(CommandHandler("summarygames", PlayerActions.summarygames))
@@ -61,7 +74,11 @@ def run_bot():
             await application.bot.delete_my_commands()
 
         await application.bot.set_my_commands(
-            commands=[("menu", "Показать меню команд")],
+            commands=[
+                ("buyin", "Закуп"),
+                ("startexit", "Выйти"),
+                ("menu", "Управление игрой"),
+            ],
             scope=BotCommandScopeAllPrivateChats(),
         )
 
