@@ -22,20 +22,23 @@ def run_bot():
     # Обработчик кнопки "Начать выход"
     application.add_handler(
         MessageHandler(
-            filters.Regex(r".*\/startexit.*"), PlayerActions.handle_quit_button
+            filters.Regex(r"^\s*\/quitgame\s*"), PlayerActions.handle_quit_button
         )
     )
 
     # Обработчик кнопки "Начать завершение игры"
     application.add_handler(
         MessageHandler(
-            filters.Regex(r".*\/endgame.*"), GameManagement.handle_endgame_command
+            filters.Regex(r"^\s*\/endgame\s*"), GameManagement.handle_endgame_command
         )
     )
 
     # Обработчик команды /quit
     application.add_handler(
-        MessageHandler(filters.Regex(r".*\/quit.*"), PlayerActions.handle_quit_command)
+        MessageHandler(
+            filters.Regex(r"^\s*\/quit(\s(0|\d{4,5}))?$"),
+            PlayerActions.handle_quit_command,
+        )
     )
 
     # Обработчик подтверждения
@@ -75,7 +78,7 @@ def run_bot():
         await application.bot.set_my_commands(
             commands=[
                 ("buyin", "Закуп"),
-                ("startexit", "Выйти"),
+                ("quitgame", "Выйти"),
                 ("menu", "Управление игрой"),
             ],
             scope=BotCommandScopeAllPrivateChats(),
