@@ -466,10 +466,6 @@ class PlayerActions:
         else:  # Если это личный чат с ботом
             keyboard = [
                 [KeyboardButton("/startgame"), KeyboardButton("/endgame")],
-                [KeyboardButton("/buyin")],
-                [KeyboardButton("/startexit")],
-                [KeyboardButton("/summary"), KeyboardButton("/summarygames")],
-                [KeyboardButton("/log"), KeyboardButton("/help")],
                 [KeyboardButton("/close_menu")],
             ]
 
@@ -546,7 +542,7 @@ class PlayerActions:
                 del context.user_data["pending_quit_amount"]
 
                 # Возвращаем основное меню
-                await PlayerActions.show_menu(update, context)
+                await PlayerActions.close_menu(update, context)
             elif "Нет, отменить" in update.message.text:
                 await MessageSender.send_to_current_channel(
                     update,
@@ -554,7 +550,7 @@ class PlayerActions:
                     "Отмена вывода. Выберите новую сумму или другое действие.",
                     reply_markup=ReplyKeyboardRemove(),
                 )
-                await PlayerActions.show_menu(update, context)
+                await PlayerActions.close_menu(update, context)
                 del context.user_data["pending_quit_amount"]
         else:
             await MessageSender.send_to_current_channel(

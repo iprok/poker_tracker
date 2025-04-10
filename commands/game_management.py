@@ -1,13 +1,16 @@
 from datetime import datetime, timezone
 from engine import Session
-from telegram import Update
+from telegram import Update, KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from domain.entity.game import Game
 from domain.entity.player_action import PlayerAction
 from domain.repository.game_repository import GameRepository
 from domain.repository.player_action_repository import PlayerActionRepository
+from domain.service.message_sender import MessageSender
 from telegram.ext import ContextTypes
 from decorators import restrict_to_members_and_private
 from config import CHANNEL_ID
+import re
+from commands.player_actions import PlayerActions
 
 
 class GameManagement:
@@ -91,3 +94,49 @@ class GameManagement:
             await update.message.reply_text("Игра завершена.")
 
         await context.bot.send_message(CHANNEL_ID, "Игра завершена.")
+
+    @staticmethod
+    @restrict_to_members_and_private
+    async def handle_endgame_command(update, context):
+        match = re.search(r"(?:@\w+\s+)?/endgame", update.message.text)
+
+        if match:
+            # Сохраняем в контексте подтверждение начала завершения игры
+            context.user_data["pending_endgame"] = True
+
+            # Создаем клавиатуру подтверждения
+            confirm_keyboard = [
+                [
+                    KeyboardButton("Да, завершить игру"),
+                    KeyboardButton("Нет, продолжить играть"),
+                ],
+            ]
+            reply_markup = ReplyKeyboardMarkup(confirm_keyboard, resize_keyboard=True)
+
+            await MessageSender.send_to_current_channel(
+                update,
+                context,
+                f"Вы уверены, что хотите завершить игру?",
+                reply_markup=reply_markup,
+            )
+
+    @staticmethod
+    @restrict_to_members_and_private
+    async def handle_confirmation(update, context):
+        if "pending_endgame" in context.user_data:
+            if "Да, завершить игру" in update.message.text:
+                await GameManagement.end_game(update, context)
+            elif "Нет, продолжить играть" in update.message.text:
+                await MessageSender.send_to_current_channel(
+                    update,
+                    context,
+                    "Отмена завершения игры.",
+                    reply_markup=ReplyKeyboardRemove(),
+                )
+        else:
+            await MessageSender.send_to_current_channel(
+                update, context, "Не найдено ожидающих подтверждения действий."
+            )
+
+        # Возвращаем основное меню
+        await PlayerActions.close_menu(update, context)
