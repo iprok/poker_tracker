@@ -116,7 +116,7 @@ class GameManagement:
             await MessageSender.send_to_current_channel(
                 update,
                 context,
-                f"Вы уверены, что хотите завершить игру?",
+                "Вы уверены, что хотите завершить игру?",
                 reply_markup=reply_markup,
             )
 

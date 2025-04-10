@@ -1,8 +1,9 @@
-from engine import Session
+from sqlalchemy.orm import Session
+from abc import ABC
 
 
-class BaseRepository:
-    db: Session = NotImplementedError
+class BaseRepository(ABC):
+    db: Session
 
     def __init__(self, db: Session):
         self.db = db

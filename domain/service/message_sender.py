@@ -24,4 +24,4 @@ class MessageSender:
                 text, reply_markup=reply_markup, parse_mode=parse_mode
             )
         else:
-            return None
+            raise ValueError("update.message отсутствует")

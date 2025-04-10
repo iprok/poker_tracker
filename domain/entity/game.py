@@ -17,7 +17,14 @@ class Game(Base):
         end_time = (
             self.end_time if self.end_time is not None else datetime.now(timezone.utc)
         )
-        duration = end_time - self.start_time
+
+        # Приводим start_time к timezone-aware, если нужно
+        if self.start_time.tzinfo is None:
+            start_time = self.start_time.replace(tzinfo=timezone.utc)
+        else:
+            start_time = self.start_time
+
+        duration = end_time - start_time
         total_seconds = int(duration.total_seconds())
         hours = total_seconds // 3600
         minutes = (total_seconds % 3600) // 60
