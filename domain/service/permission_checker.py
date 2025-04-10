@@ -7,6 +7,9 @@ from telegram.constants import ChatMemberStatus
 class PermissionChecker:
     @staticmethod
     async def check_is_group_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not update.effective_user:
+            return False
+
         try:
             user_id = update.effective_user.id
 
@@ -19,11 +22,12 @@ class PermissionChecker:
                 return True
 
             return False
-        except:
+        except Exception:
             return False
 
     @staticmethod
-    async def check_is_chat_private(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if update.effective_chat.type == "private":
+    async def check_is_chat_private(update: Update, _: ContextTypes.DEFAULT_TYPE):
+        if update.effective_chat and update.effective_chat.type == "private":
             return True
-        return False
+        else:
+            return False

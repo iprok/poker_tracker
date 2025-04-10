@@ -9,9 +9,10 @@ def restrict_to_members(func):
             await func(update, context)
             return
 
-        await update.message.reply_text(
-            "Эта команда обрабатывается только участниками группы."
-        )
+        if update.message:
+            await update.message.reply_text(
+                "Эта команда обрабатывается только участниками группы."
+            )
         return
 
     return wrapper
@@ -26,9 +27,10 @@ def restrict_to_members_and_private(func):
             await func(update, context)
             return
 
-        await update.message.reply_text(
-            "Эта команда обрабатывается только в канале бота или участниками группы."
-        )
+        if update.message:
+            await update.message.reply_text(
+                "Эта команда обрабатывается только в канале бота или участниками группы."
+            )
         return
 
     return wrapper

@@ -1,7 +1,6 @@
 from datetime import datetime
 import pytz
 from config import TIMEZONE
-from telegram import Update
 from telegram.ext import ContextTypes
 
 
