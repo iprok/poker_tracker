@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import pytz
 from config import TIMEZONE
 from telegram.ext import ContextTypes
@@ -64,3 +64,12 @@ async def get_user_info(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> str
         # В случае ошибки возвращаем user_id
         print(f"Ошибка при получении информации о пользователе: {e}")
         return str(user_id)
+
+
+def ensure_aware(dt: datetime) -> datetime:
+    """
+    Превращает offset-naive datetime в offset-aware с UTC, если требуется.
+    """
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
