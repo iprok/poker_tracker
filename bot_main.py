@@ -63,6 +63,7 @@ def run_bot():
     application.add_handler(CommandHandler("summarygames", PlayerActions.summarygames))
     application.add_handler(CommandHandler("log", PlayerActions.log))
     application.add_handler(CommandHandler("help", PlayerActions.help))
+    application.add_handler(CommandHandler("stats", PlayerActions.stats))
 
     # Показываем меню при старте бота
     async def post_init(application):

@@ -26,6 +26,9 @@ from config import (
 from decorators import restrict_to_members, restrict_to_members_and_private
 import re
 
+from domain.service.player_statistics_service import PlayerStatisticsService
+from domain.model.player_statistics import PlayerStatistics
+
 
 class PlayerActions:
 
@@ -354,6 +357,7 @@ class PlayerActions:
                 "/startgame - Начать новую игру.\n\n"
                 "/buyin - Закупить фишки.\n\n"
                 "/endgame - Завершить текущую игру.\n"
+                "/stats - Показать персональную статистику.\n"
             )
 
         await MessageSender.send_to_current_channel(update, context, help_text)
@@ -556,3 +560,42 @@ class PlayerActions:
             await MessageSender.send_to_current_channel(
                 update, context, "Не найдено ожидающих подтверждения действий."
             )
+
+    @staticmethod
+    @restrict_to_members_and_private
+    async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not update.effective_user:
+            return
+
+        user_id = update.effective_user.id
+
+        session = Session()
+        stats_service = PlayerStatisticsService(session)
+        stats: PlayerStatistics = stats_service.get_statistics_for_user(user_id)
+        session.close()
+
+        # Форматируем статистику
+        stats_text = (
+            f"🃏 Игры сыграны: <b>{stats.games_num}</b>\n"
+            f"💰 Всего закупов: <b>{stats.total_buyin_money} лв</b>\n"
+            f"📊 Среднее количество закупов: <b>{stats.average_buyin_number:.2f}</b>\n"
+            f"📈 Прибыль: <b>{stats.profit_money} лв</b>\n"
+            f"📉 ROI: <b>{stats.roi:.1f}%</b>"
+        )
+
+        # Личное сообщение
+        await MessageSender.send_to_current_channel(
+            update,
+            context,
+            "<b>Ваша статистика:</b>\n\n" + stats_text,
+            parse_mode="HTML",
+        )
+
+        # Публичное сообщение в канал
+        user_info = await get_user_info(user_id, context)
+        await MessageSender.send_to_channel(
+            update,
+            context,
+            f"<b>Статистика игрока {user_info}:</b>\n\n{stats_text}",
+            parse_mode="HTML",
+        )

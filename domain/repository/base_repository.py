@@ -7,6 +7,7 @@ class BaseRepository(ABC):
 
     def __init__(self, db: Session):
         self.db = db
+        self.model = None  # позже будет переопределён в потомках
 
     def save(self, model):
         self.db.add(model)

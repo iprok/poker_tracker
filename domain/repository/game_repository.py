@@ -11,3 +11,6 @@ class GameRepository(BaseRepository):
 
     def get_games_by_limit(self, limit: int) -> List[Game]:
         return self.db.query(Game).order_by(desc(Game.id)).limit(limit).all()
+
+    # def get_all_games(self) -> List[Game]:
+    #     return self.db.query(Game).all()
