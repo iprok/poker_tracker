@@ -93,8 +93,9 @@ def build_application() -> Application:
     return application
 
 
-def run_bot_blocking():
-    """Запускает Telegram-бота в блокирующем режиме."""
-    asyncio.set_event_loop(asyncio.new_event_loop())  # Обязательное условие в потоке
+def run_bot():
     app = build_application()
-    app.run_polling(stop_signals=[])  # Отключаем работу сигналов в потоке
+    app.run_polling()
+
+if __name__ == "__main__":
+    run_bot()

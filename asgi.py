@@ -84,14 +84,3 @@ def get_player_stats(user_id: int):
         "profit": stats.profit_money,
         "roi": stats.roi,
     }
-
-
-# --- Start bot in background thread ---
-def start_bot_in_thread():
-    threading.Thread(target=run_bot_blocking, daemon=True).start()
-
-
-# --- Entry point ---
-if __name__ == "__main__":
-    start_bot_in_thread()
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
