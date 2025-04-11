@@ -33,30 +33,30 @@ def build_application() -> Application:
 
     # Регистрация обработчиков
     application.add_handler(
-        MessageHandler(filters.Regex(r"^\s*/menu\b"), PlayerActions.show_menu)
+        MessageHandler(filters.Regex(r"^\s*/menu$"), PlayerActions.show_menu)
     )
     application.add_handler(
-        MessageHandler(filters.Regex(r"^\s*/close_menu\b"), PlayerActions.close_menu)
+        MessageHandler(filters.Regex(r"^\s*/close_menu$"), PlayerActions.close_menu)
     )
     application.add_handler(
         MessageHandler(
-            filters.Regex(r"^\s*/quitgame\b"), PlayerActions.handle_quit_button
+            filters.Regex(r"^\s*/quitgame$"), PlayerActions.handle_quit_button
         )
     )
     application.add_handler(
         MessageHandler(
-            filters.Regex(r"^\s*/endgame\b"), GameManagement.handle_endgame_command
+            filters.Regex(r"^\s*/endgame$"), GameManagement.handle_endgame_command
         )
     )
     application.add_handler(
         MessageHandler(
-            filters.Regex(r"^\s*/quit(\b(0|\d{4,5}))?$"),
+            filters.Regex(r"^\s*/quit( (0|\d{4,5}))?$"),
             PlayerActions.handle_quit_command,
         )
     )
     application.add_handler(
         MessageHandler(
-            filters.Regex(r"^(Да, вывести\b\d+|Нет, отменить)$"),
+            filters.Regex(r"^(Да, вывести \d{4,5}|Нет, отменить)$"),
             PlayerActions.handle_confirmation,
         )
     )
@@ -67,27 +67,25 @@ def build_application() -> Application:
         )
     )
     application.add_handler(
-        MessageHandler(filters.Regex(r"^\s*/startgame\b"), GameManagement.start_game)
+        MessageHandler(filters.Regex(r"^\s*/startgame$"), GameManagement.start_game)
     )
     application.add_handler(
-        MessageHandler(filters.Regex(r"^\s*/buyin\b"), PlayerActions.buyin)
+        MessageHandler(filters.Regex(r"^\s*/buyin$"), PlayerActions.buyin)
     )
     application.add_handler(
-        MessageHandler(filters.Regex(r"^\s*/summary\b"), PlayerActions.summary)
+        MessageHandler(filters.Regex(r"^\s*/summary$"), PlayerActions.summary)
     )
     application.add_handler(
-        MessageHandler(
-            filters.Regex(r"^\s*/summarygames\b"), PlayerActions.summarygames
-        )
+        MessageHandler(filters.Regex(r"^\s*/summarygames$"), PlayerActions.summarygames)
     )
     application.add_handler(
-        MessageHandler(filters.Regex(r"^\s*/log\b"), PlayerActions.log)
+        MessageHandler(filters.Regex(r"^\s*/log$"), PlayerActions.log)
     )
     application.add_handler(
-        MessageHandler(filters.Regex(r"^\s*/help\b"), PlayerActions.help)
+        MessageHandler(filters.Regex(r"^\s*/help$"), PlayerActions.help)
     )
     application.add_handler(
-        MessageHandler(filters.Regex(r"^\s*/mystats\b"), PlayerActions.stats)
+        MessageHandler(filters.Regex(r"^\s*/mystats$"), PlayerActions.stats)
     )
 
     # Назначение функции инициализации после запуска
