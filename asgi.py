@@ -1,11 +1,7 @@
-import threading
-
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import uvicorn
 
-from bot_main import run_bot_blocking
 from engine import Session
 from domain.repository.player_action_repository import PlayerActionRepository
 from domain.service.player_statistics_service import PlayerStatisticsService
