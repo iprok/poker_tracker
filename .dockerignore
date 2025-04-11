@@ -11,7 +11,6 @@ __pycache__/
 venv/
 env/
 .venv/
-.venv
 
 # Distribution / packaging
 *.egg-info/
@@ -39,12 +38,16 @@ build/
 *.swo
 *.tmp
 
+# Docker itself
+Dockerfile
+docker-compose.yml
+
+# Git
+.git/
+.gitignore
+
 # OS-generated files
 .DS_Store
 Thumbs.db
-
-*.old
-
-config.json
 
 files.txt
