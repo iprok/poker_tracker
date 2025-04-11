@@ -56,7 +56,7 @@ def build_application() -> Application:
     )
     application.add_handler(
         MessageHandler(
-            filters.Regex(r"^(Да, вывести \d{4,5}|Нет, отменить)$"),
+            filters.Regex(r"^(Да, вывести (0|\d{4,5})|Нет, отменить)$"),
             PlayerActions.handle_confirmation,
         )
     )
