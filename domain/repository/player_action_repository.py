@@ -3,6 +3,7 @@ from typing import List
 from domain.entity.player_action import PlayerAction
 from domain.repository.base_repository import BaseRepository
 from sqlalchemy import or_, func
+from domain.model.user_info import UserInfo, UserList
 
 
 class PlayerActionRepository(BaseRepository):
@@ -60,3 +61,15 @@ class PlayerActionRepository(BaseRepository):
             .scalar()
             or 0
         )
+
+    def get_distinct_users(self) -> UserList:
+        """
+        Returns a UserList dataclass containing unique users with their Telegram IDs and usernames.
+        """
+        rows = (
+            self.db.query(self.model.user_id, self.model.username)
+            .distinct(self.model.user_id)
+            .all()
+        )
+        users = [UserInfo(user_id=row[0], username=row[1]) for row in rows]
+        return UserList(users=users)

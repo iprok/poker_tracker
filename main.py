@@ -1,5 +1,4 @@
 import threading
-from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,6 +10,7 @@ from engine import Session
 from domain.repository.player_action_repository import PlayerActionRepository
 from domain.service.player_statistics_service import PlayerStatisticsService
 from domain.model.player_statistics import PlayerStatistics
+from domain.model.user_info import UserList
 
 # --- FastAPI app ---
 app = FastAPI(
@@ -29,12 +29,6 @@ app.add_middleware(
 )
 
 
-# --- Response Models ---
-class UserInfo(BaseModel):
-    user_id: int
-    username: Optional[str] = None
-
-
 class PlayerStats(BaseModel):
     games_played: int
     total_buyin: int
@@ -50,10 +44,7 @@ def read_root():
 
 
 @app.get(
-    "/api/users",
-    response_model=List[UserInfo],
-    summary="List all users",
-    tags=["Users"],
+    "/api/users", response_model=UserList, summary="List all users", tags=["Users"]
 )
 def get_users():
     """
@@ -61,15 +52,9 @@ def get_users():
     """
     session = Session()
     repo = PlayerActionRepository(session)
-
-    rows = (
-        session.query(repo.model.user_id, repo.model.username)
-        .distinct(repo.model.user_id)
-        .all()
-    )
+    user_list = repo.get_distinct_users()
     session.close()
-
-    return [{"user_id": row[0], "username": row[1]} for row in rows]
+    return user_list
 
 
 @app.get(
