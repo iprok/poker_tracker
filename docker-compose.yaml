@@ -2,5 +2,18 @@ services:
   python_bot_poker:
     build: .
     container_name: python_bot_poker
+    command: python bot_main.py
     volumes:
-      - .:/app  # Mount current directory into the container
+      - .:/app
+    restart: unless-stopped
+
+  poker_web_api:
+    build: .
+    container_name: poker_web_api
+    command: uvicorn asgi:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - .:/app
+    ports:
+      - "127.0.0.1:8000:8000"
+    restart: unless-stopped
+

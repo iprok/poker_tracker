@@ -13,3 +13,6 @@ cs-fix:
 linter:
 	@echo "Running pyright..."
 	$(DOCKER_COMPOSE) run python_bot_poker pyright
+webserver:
+	@echo "Running uvicorn..."
+	uvicorn asgi:app --host 0.0.0.0 --port 8000
