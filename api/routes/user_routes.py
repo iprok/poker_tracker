@@ -1,8 +1,8 @@
 from fastapi import APIRouter
 from engine import Session
 from domain.repository.player_action_repository import PlayerActionRepository
-from domain.model.user_info import UserInfoEntity
-from api.model.user_info import UserInfo, UserList
+from domain.model.user_info_entity import UserInfoEntity
+from api.model.user_list_schema import UserInfo, UserList
 
 router = APIRouter()
 

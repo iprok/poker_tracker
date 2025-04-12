@@ -3,7 +3,7 @@ from typing import List
 from domain.entity.player_action import PlayerAction
 from domain.repository.base_repository import BaseRepository
 from sqlalchemy import or_, func
-from domain.model.user_info import UserInfoEntity
+from domain.model.user_info_entity import UserInfoEntity
 
 
 class PlayerActionRepository(BaseRepository):

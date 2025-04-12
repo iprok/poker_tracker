@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from engine import Session
 from domain.service.player_statistics_service import PlayerStatisticsService
 from domain.model.player_statistics import PlayerStatistics
-from api.model.player_stats import PlayerStatsResponse
+from api.model.player_stats_schema import PlayerStatsResponse
 
 router = APIRouter()
 
