@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime
-from datetime import datetime
+from datetime import datetime, timezone
 from engine import Base, Engine
 
 
@@ -12,7 +12,9 @@ class PlayerAction(Base):
     action = Column(String, nullable=False)
     chips = Column(Integer, nullable=True)
     amount = Column(Float, nullable=True)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
 
 
 Base.metadata.create_all(Engine)
