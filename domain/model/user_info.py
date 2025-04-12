@@ -1,12 +1,8 @@
-# domain/model/user_info.py
-from pydantic import BaseModel
-from typing import Optional, List
+from dataclasses import dataclass
+from typing import Optional
 
 
-class UserInfo(BaseModel):
+@dataclass
+class UserInfoEntity:
     user_id: int
     username: Optional[str] = None
-
-
-class UserList(BaseModel):
-    users: List[UserInfo]
