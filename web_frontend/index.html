@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <title>Poker Stats</title>
+    <script src="config.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/alpinejs" defer></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -63,7 +64,7 @@
     </div>
 
     <script>
-      const API_URL = "http://localhost:8001";
+      const API_URL = CONFIG.API_URL;
 
       function userStatsTable() {
         return {
