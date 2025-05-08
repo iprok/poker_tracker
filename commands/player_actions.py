@@ -22,6 +22,7 @@ from config import (
     SHOW_SUMMARY_ON_QUIT,
     LOG_AMOUNT_LAST_GAMES,
     LOG_AMOUNT_LAST_ACTIONS,
+    STATS_BLOCKED_USER_IDS,
 )
 from decorators import restrict_to_members, restrict_to_members_and_private
 import re
@@ -565,6 +566,12 @@ class PlayerActions:
     @restrict_to_members_and_private
     async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not update.effective_user:
+            return
+
+        if update.effective_user.id in STATS_BLOCKED_USER_IDS:
+            await MessageSender.send_to_current_channel(
+                update, context, "Ваша статистика недоступна."
+            )
             return
 
         user_id = update.effective_user.id

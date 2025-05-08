@@ -4,6 +4,7 @@ from domain.service.player_statistics_service import PlayerStatisticsService
 from domain.model.player_statistics import PlayerStatistics
 from api.model.player_stats_schema import PlayerStatsResponse
 from cachetools import TTLCache
+from config import STATS_BLOCKED_USER_IDS
 
 stats_cache = TTLCache(maxsize=500, ttl=600)  # 10 минут
 
@@ -17,6 +18,11 @@ router = APIRouter()
     tags=["Statistics"],
 )
 def get_player_stats(user_id: int):
+    if user_id in STATS_BLOCKED_USER_IDS:
+        raise HTTPException(
+            status_code=403, detail="Access denied to stats for this user."
+        )
+
     if user_id in stats_cache:
         return stats_cache[user_id]
 
