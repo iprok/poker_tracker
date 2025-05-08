@@ -24,6 +24,15 @@
         class="border p-2 mb-4 w-full rounded"
       />
 
+    <label class="flex items-center mb-4 space-x-2">
+      <input
+        type="checkbox"
+        x-model="hideSmallSample"
+        class="form-checkbox h-4 w-4 text-blue-600"
+      />
+      <span>Не отображать, если меньше трёх игр</span>
+    </label>      
+
       <div class="overflow-x-auto">
         <table
           class="min-w-full bg-white border border-gray-300 rounded shadow"
@@ -72,6 +81,7 @@
           search: "",
           sortField: "roi",
           sortAsc: false,
+          hideSmallSample: true,
 
           headers: [
             { field: "username", label: "👤 Имя / ID" },
@@ -125,10 +135,10 @@
             const filtered = this.users.filter((u) => {
               const name = u.username?.toLowerCase() ?? "";
               const id = u.user_id.toString();
-              return (
-                name.includes(this.search.toLowerCase()) ||
-                id.includes(this.search)
-              );
+              const nameMatches =
+                name.includes(this.search.toLowerCase()) || id.includes(this.search);
+              const sampleOk = !this.hideSmallSample || u.stats.games_played >= 3;
+              return nameMatches && sampleOk;
             });
 
             return filtered.sort((a, b) => {
