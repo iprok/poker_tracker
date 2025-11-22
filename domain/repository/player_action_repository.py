@@ -86,3 +86,11 @@ class PlayerActionRepository(BaseRepository):
         )
 
         return [UserInfoEntity(user_id=row[0], username=row[1]) for row in rows]
+
+    def get_all_user_actions(self, user_id: int) -> List[PlayerAction]:
+        return (
+            self.db.query(self.model)
+            .filter_by(user_id=user_id)
+            .order_by(self.model.timestamp.asc())
+            .all()
+        )
