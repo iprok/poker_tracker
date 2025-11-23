@@ -35,24 +35,25 @@
                 </span>
               </th>
             </template>
-            <th class="p-2 text-left">График</th>
           </tr>
         </thead>
         <tbody>
           <template x-for="user in filteredAndSorted" :key="user.user_id">
             <tr class="border-t hover:bg-gray-50">
-              <td class="p-2" x-text="user.username ?? user.user_id"></td>
+              <td class="p-2">
+                <template x-if="user.stats.games_played >= 3">
+                  <a href="#" @click.prevent="openRoiChart(user)" class="text-blue-600 hover:underline"
+                    x-text="user.username ?? user.user_id"></a>
+                </template>
+                <template x-if="user.stats.games_played < 3">
+                  <span x-text="user.username ?? user.user_id"></span>
+                </template>
+              </td>
               <td class="p-2" x-text="user.stats.games_played"></td>
               <td class="p-2" x-text="user.stats.total_buyin"></td>
               <td class="p-2" x-text="user.stats.avg_buyins_per_game.toFixed(2)"></td>
               <td class="p-2" x-text="user.stats.profit"></td>
               <td class="p-2" x-text="user.stats.roi.toFixed(1)"></td>
-              <td class="p-2">
-                <button x-show="user.stats.games_played >= 3" @click="openRoiChart(user)"
-                  class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-xs">
-                  📈
-                </button>
-              </td>
             </tr>
           </template>
         </tbody>
