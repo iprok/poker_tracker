@@ -53,11 +53,13 @@ class PlayerActions:
 
         user = update.effective_user
 
+        user_info = await get_user_info(user.id, context)
+
         # Добавляем закуп
         action = PlayerAction(
             game_id=current_game_id,
             user_id=user.id,
-            username=user.username,
+            username=user_info,
             action="buyin",
             chips=CHIP_COUNT,
             amount=CHIP_VALUE,
@@ -85,12 +87,10 @@ class PlayerActions:
 
         await MessageSender.send_to_current_channel(update, context, buyin_text)
 
-        user_info = await get_user_info(user.id, context) or str(user.id)
-
         await MessageSender.send_to_channel(
             update,
             context,
-            f"<b>{user_info} (@{update.effective_user.username})</b>: " + buyin_text,
+            f"<b>{user_info or str(user.id)} (@{update.effective_user.username})</b>: " + buyin_text,
             parse_mode="HTML",
         )
 
@@ -199,10 +199,12 @@ class PlayerActions:
         else:
             balance_message = "Никто никому ничего не должен."
 
+        user_info = await get_user_info(user.id, context)
+
         action = PlayerAction(
             game_id=current_game_id,
             user_id=user.id,
-            username=user.username,
+            username=user_info,
             action="quit",
             chips=chips_left,
             amount=amount,
@@ -225,12 +227,10 @@ class PlayerActions:
             f"До этого закупов от вас было на {int(user_buyins)} лв, выходов - на {int(user_quits)}лв.\n{balance_message}\n\n"
         )
 
-        user_info = await get_user_info(user.id, context) or str(user.id)
-
         await MessageSender.send_to_channel(
             update,
             context,
-            f"<b>{user_info} (@{update.effective_user.username})</b>: " + quit_text,
+            f"<b>{user_info or str(user.id)} (@{update.effective_user.username})</b>: " + quit_text,
             parse_mode="HTML",
         )
 

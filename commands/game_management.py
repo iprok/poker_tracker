@@ -11,6 +11,7 @@ from decorators import restrict_to_members_and_private
 from config import CHANNEL_ID
 import re
 from commands.player_actions import PlayerActions
+from utils import get_user_info
 
 
 class GameManagement:
@@ -46,10 +47,11 @@ class GameManagement:
 
         # Логируем старт игры
         if update.effective_user:
+            user_info = await get_user_info(update.effective_user.id, context)
             action = PlayerAction(
                 game_id=new_game.id,
                 user_id=update.effective_user.id,
-                username=update.effective_user.username,
+                username=user_info,
                 action="start_game",
                 timestamp=datetime.now(timezone.utc),
             )
@@ -80,10 +82,11 @@ class GameManagement:
 
         # Логируем завершение игры
         if update.effective_user:
+            user_info = await get_user_info(update.effective_user.id, context)
             action = PlayerAction(
                 game_id=current_game.id,
                 user_id=update.effective_user.id,
-                username=update.effective_user.username,
+                username=user_info,
                 action="end_game",
                 timestamp=datetime.now(timezone.utc),
             )
