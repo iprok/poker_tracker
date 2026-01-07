@@ -9,7 +9,7 @@ services:
       ADMINER_PASSWORD:
       ADMINER_DB: /db
     ports:
-      - "127.0.0.1:8083:8080"
+      - "127.0.0.1:8084:8080"
     volumes:
       - type: bind
         source: ../poker_bot.db
@@ -26,7 +26,7 @@ services:
       ADMINER_PASSWORD:
       ADMINER_DB: /var/tmp/db
     ports:
-      - "127.0.0.1:8084:8080"
+      - "127.0.0.1:8085:8080"
     volumes:
       - type: bind
         source: ../poker_bot.db
