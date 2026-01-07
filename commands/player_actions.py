@@ -85,7 +85,7 @@ class PlayerActions:
 
         await MessageSender.send_to_current_channel(update, context, buyin_text)
 
-        user_info = await get_user_info(user.id, context)
+        user_info = await get_user_info(user.id, context) or str(user.id)
 
         await MessageSender.send_to_channel(
             update,
@@ -225,7 +225,7 @@ class PlayerActions:
             f"До этого закупов от вас было на {int(user_buyins)} лв, выходов - на {int(user_quits)}лв.\n{balance_message}\n\n"
         )
 
-        user_info = await get_user_info(user.id, context)
+        user_info = await get_user_info(user.id, context) or str(user.id)
 
         await MessageSender.send_to_channel(
             update,
@@ -379,7 +379,7 @@ class PlayerActions:
 
         # Собираем статистику по игрокам
         for action in actions:
-            user_info = await get_user_info(action.user_id, context)
+            user_info = await get_user_info(action.user_id, context) or str(action.user_id)
 
             if user_info not in player_stats:
                 player_stats[user_info] = {"buyin": 0, "quit": 0}
@@ -599,7 +599,7 @@ class PlayerActions:
         )
 
         # Публичное сообщение в канал
-        user_info = await get_user_info(user_id, context)
+        user_info = await get_user_info(user_id, context) or str(user_id)
         await MessageSender.send_to_channel(
             update,
             context,

@@ -25,7 +25,7 @@ def format_datetime_by_format(dt: datetime, format) -> str:
     return dt.astimezone(timezone).strftime(format)
 
 
-async def get_user_info(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> str:
+async def get_user_info(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> str | None:
     try:
         # Получаем информацию о пользователе
         user = await context.bot.get_chat(user_id)
@@ -57,13 +57,13 @@ async def get_user_info(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> str
         if user.username:
             return f"@{user.username}"
 
-        # Если username отсутствует, используем user_id
-        return str(user.id)
+        # Если username отсутствует, возвращаем None
+        return None
 
     except Exception as e:
-        # В случае ошибки возвращаем user_id
+        # В случае ошибки возвращаем None
         print(f"Ошибка при получении информации о пользователе: {e}")
-        return str(user_id)
+        return None
 
 
 def ensure_aware(dt: datetime) -> datetime:
