@@ -29,9 +29,9 @@ class PlayerStatisticsService:
 
         return PlayerStatistics(
             games_num=games_num,
-            total_buyin_money=int(round(total_buyin)),
+            total_buyin_money=round(total_buyin, 2),
             average_buyin_number=round(average_buyin_number, 2),
-            profit_money=int(round(profit)),
+            profit_money=round(profit, 2),
             roi=round(roi, 1),
         )
 

@@ -6,9 +6,9 @@ from domain.model.player_statistics import PlayerStatistics
 
 class PlayerStatsResponse(BaseModel):
     games_played: int
-    total_buyin: int
+    total_buyin: float
     avg_buyins_per_game: float
-    profit: int
+    profit: float
     roi: float
 
     @classmethod

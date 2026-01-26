@@ -39,7 +39,7 @@ class PlayerActionRepository(BaseRepository):
             or 0
         )
 
-    def get_total_buyin_amount(self, user_id: int) -> int:
+    def get_total_buyin_amount(self, user_id: int) -> float:
         return (
             self.db.query(func.coalesce(func.sum(self.model.amount), 0))
             .filter_by(user_id=user_id, action="buyin")
@@ -47,7 +47,7 @@ class PlayerActionRepository(BaseRepository):
             or 0
         )
 
-    def get_total_quit_amount(self, user_id: int) -> int:
+    def get_total_quit_amount(self, user_id: int) -> float:
         return (
             self.db.query(func.coalesce(func.sum(self.model.amount), 0))
             .filter_by(user_id=user_id, action="quit")
