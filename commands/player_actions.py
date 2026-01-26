@@ -18,6 +18,8 @@ from utils import format_datetime, format_datetime_to_date, get_user_info
 from config import (
     CHIP_VALUE,
     CHIP_COUNT,
+    CHIP_LIMIT,
+    CURRENCY,
     SHOW_SUMMARY_ON_BUYIN,
     SHOW_SUMMARY_ON_QUIT,
     LOG_AMOUNT_LAST_GAMES,
@@ -81,8 +83,8 @@ class PlayerActions:
         session.close()
 
         buyin_text = (
-            f"Закуп на {CHIP_COUNT} фишек ({CHIP_VALUE} лева) записан.\n"
-            f"Вы уже закупились {buyin_count} раз(а) на общую сумму {buyin_total:.2f} лева в этой игре."
+            f"Закуп на {CHIP_COUNT} фишек ({CHIP_VALUE} {CURRENCY}) записан.\n"
+            f"Вы уже закупились {buyin_count} раз(а) на общую сумму {buyin_total:.2f} {CURRENCY} в этой игре."
         )
 
         await MessageSender.send_to_current_channel(update, context, buyin_text)
@@ -126,7 +128,7 @@ class PlayerActions:
             return
 
         # Проверяем кратность
-        step = CHIP_COUNT / CHIP_VALUE
+        step = CHIP_LIMIT
         if chips_left % step != 0:
             await MessageSender.send_to_current_channel(
                 update,
@@ -193,9 +195,9 @@ class PlayerActions:
 
         user_balance = user_buyins - (user_quits + amount)
         if user_balance > 0:
-            balance_message = f"Вы должны в банк {int(abs(user_balance))} лева."
+            balance_message = f"Вы должны в банк {abs(user_balance)} {CURRENCY}."
         elif user_balance < 0:
-            balance_message = f"Банк должен вам {int(abs(user_balance))} лева."
+            balance_message = f"Банк должен вам {abs(user_balance)} {CURRENCY}."
         else:
             balance_message = "Никто никому ничего не должен."
 
@@ -215,16 +217,16 @@ class PlayerActions:
         session.close()
 
         quit_text = (
-            f"@{update.effective_user.username} - Выход записан. У вас осталось {chips_left} фишек, что эквивалентно {int(amount)} лева.\n"
-            f"До этого закупов от вас было на {int(user_buyins)} лв, выходов - на {int(user_quits)}лв.\n{balance_message}\n\n"
+            f"@{update.effective_user.username} - Выход записан. У вас осталось {chips_left} фишек, что эквивалентно {amount} {CURRENCY}.\n"
+            f"До этого закупов от вас было на {user_buyins} {CURRENCY}, выходов - на {user_quits} {CURRENCY}.\n{balance_message}\n\n"
         )
         await MessageSender.send_to_current_channel(
             update, context, quit_text, reply_markup=ReplyKeyboardRemove()
         )
 
         quit_text = (
-            f"Выход записан. У вас осталось {chips_left} фишек, что эквивалентно {int(amount)} лева.\n"
-            f"До этого закупов от вас было на {int(user_buyins)} лв, выходов - на {int(user_quits)}лв.\n{balance_message}\n\n"
+            f"Выход записан. У вас осталось {chips_left} фишек, что эквивалентно {amount} {CURRENCY}.\n"
+            f"До этого закупов от вас было на {user_buyins} {CURRENCY}, выходов - на {user_quits} {CURRENCY}.\n{balance_message}\n\n"
         )
 
         await MessageSender.send_to_channel(
@@ -291,7 +293,7 @@ class PlayerActions:
             amount = f"{action.amount:.2f}" if action.amount is not None else "None"
             log_text += (
                 f"{formatted_timestamp}: {action.username} - {action.action} "
-                f"({action.chips} фишек, {amount} лева)\n"
+                f"({action.chips} фишек, {amount} {CURRENCY})\n"
             )
 
         session.close()
@@ -426,27 +428,27 @@ class PlayerActions:
         if debtors:
             summary_text += "💸 <b>Должны банку:</b>\n"
             for username, balance in debtors:
-                summary_text += f"{username}: {-balance:.2f} лева\n"
+                summary_text += f"{username}: {-balance:.2f} {CURRENCY}\n"
             summary_text += "\n"
 
         # Банк должен
         if creditors:
             summary_text += "💰 <b>Банк должен:</b>\n"
             for username, balance in creditors:
-                summary_text += f"{username}: {balance:.2f} лева\n"
+                summary_text += f"{username}: {balance:.2f} {CURRENCY}\n"
             summary_text += "\n"
 
         # Обрели гармонию
         if balanced:
             summary_text += "☯️ <b>Обрели гармонию:</b>\n"
             for username, balance in balanced:
-                summary_text += f"{username}: {balance:.2f} лева\n"
+                summary_text += f"{username}: {balance:.2f} {CURRENCY}\n"
             summary_text += "\n"
 
         # Общий баланс
         total_balance = total_buyin - total_quit
         summary_text += (
-            f"💼 <b>Общее количество денег в банке:</b> {total_balance:.2f} лева.\n"
+            f"💼 <b>Общее количество денег в банке:</b> {total_balance:.2f} {CURRENCY}.\n"
         )
 
         # Используем метод get_duration из класса Game
@@ -584,9 +586,9 @@ class PlayerActions:
         # Форматируем статистику
         stats_text = (
             f"🃏 Игры сыграны: <b>{stats.games_num}</b>\n"
-            f"💰 Всего закупов: <b>{stats.total_buyin_money} лв</b>\n"
+            f"💰 Всего закупов: <b>{stats.total_buyin_money} {CURRENCY}</b>\n"
             f"📊 Среднее количество закупов: <b>{stats.average_buyin_number:.2f}</b>\n"
-            f"📈 Прибыль: <b>{stats.profit_money} лв</b>\n"
+            f"📈 Прибыль: <b>{stats.profit_money} {CURRENCY}</b>\n"
             f"📉 ROI: <b>{stats.roi:.1f}%</b>"
         )
 
