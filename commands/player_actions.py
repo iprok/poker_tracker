@@ -91,7 +91,8 @@ class PlayerActions:
         await MessageSender.send_to_channel(
             update,
             context,
-            f"<b>{user_info or str(user.id)} (@{update.effective_user.username})</b>: " + buyin_text,
+            f"<b>{user_info or str(user.id)} (@{update.effective_user.username})</b>: "
+            + buyin_text,
             parse_mode="HTML",
         )
 
@@ -231,7 +232,8 @@ class PlayerActions:
         await MessageSender.send_to_channel(
             update,
             context,
-            f"<b>{user_info or str(user.id)} (@{update.effective_user.username})</b>: " + quit_text,
+            f"<b>{user_info or str(user.id)} (@{update.effective_user.username})</b>: "
+            + quit_text,
             parse_mode="HTML",
         )
 
@@ -380,7 +382,9 @@ class PlayerActions:
 
         # Собираем статистику по игрокам
         for action in actions:
-            user_info = await get_user_info(action.user_id, context) or str(action.user_id)
+            user_info = await get_user_info(action.user_id, context) or str(
+                action.user_id
+            )
 
             if user_info not in player_stats:
                 player_stats[user_info] = {"buyin": 0, "quit": 0}
@@ -446,9 +450,7 @@ class PlayerActions:
 
         # Общий баланс
         total_balance = total_buyin - total_quit
-        summary_text += (
-            f"💼 <b>Общее количество денег в банке:</b> {total_balance:.2f} {CURRENCY}.\n"
-        )
+        summary_text += f"💼 <b>Общее количество денег в банке:</b> {total_balance:.2f} {CURRENCY}.\n"
 
         # Используем метод get_duration из класса Game
         summary_with_duration = (
