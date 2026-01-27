@@ -14,8 +14,20 @@
   <div class="max-w-6xl mx-auto p-4" x-data="userStatsTable()" x-init="init()">
     <h1 class="text-2xl font-bold mb-4">📊 Статистика игроков</h1>
 
-    <input type="text" x-model="search" placeholder="🔍 Фильтр по имени или ID"
-      class="border p-2 mb-4 w-full rounded" />
+    <div class="flex flex-wrap gap-4 mb-4 items-end bg-white p-4 rounded shadow border border-gray-200">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">📅 Начало периода</label>
+        <input type="date" x-model="tableStartDate" class="border p-2 rounded w-40">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">📅 Конец периода</label>
+        <input type="date" x-model="tableEndDate" class="border p-2 rounded w-40">
+      </div>
+      <div class="flex-grow">
+        <label class="block text-sm font-medium text-gray-700 mb-1">🔍 Поиск</label>
+        <input type="text" x-model="search" placeholder="Имя или ID" class="border p-2 rounded w-full" />
+      </div>
+    </div>
 
     <label class="flex items-center mb-4 space-x-2">
       <input type="checkbox" x-model="hideSmallSample" class="form-checkbox h-4 w-4 text-blue-600" />
@@ -42,19 +54,19 @@
           <template x-for="user in filteredAndSorted" :key="user.user_id">
             <tr class="border-t hover:bg-gray-50">
               <td class="p-2">
-                <template x-if="user.stats.games_played >= 3">
+                <template x-if="user.displayStats.games_played >= 3">
                   <a href="#" @click.prevent="openRoiChart(user)" class="text-blue-600 hover:underline"
                     x-text="user.username ?? user.user_id"></a>
                 </template>
-                <template x-if="user.stats.games_played < 3">
+                <template x-if="user.displayStats.games_played < 3">
                   <span x-text="user.username ?? user.user_id"></span>
                 </template>
               </td>
-              <td class="p-2" x-text="user.stats.games_played"></td>
-              <td class="p-2" x-text="user.stats.total_buyin"></td>
-              <td class="p-2" x-text="user.stats.avg_buyins_per_game.toFixed(2)"></td>
-              <td class="p-2" x-text="user.stats.profit"></td>
-              <td class="p-2" x-text="user.stats.roi.toFixed(1)"></td>
+              <td class="p-2" x-text="user.displayStats.games_played"></td>
+              <td class="p-2" x-text="user.displayStats.total_buyin.toFixed(2)"></td>
+              <td class="p-2" x-text="user.displayStats.avg_buyins_per_game.toFixed(2)"></td>
+              <td class="p-2" x-text="user.displayStats.profit.toFixed(2)"></td>
+              <td class="p-2" x-text="user.displayStats.roi.toFixed(1)"></td>
             </tr>
           </template>
         </tbody>
@@ -72,11 +84,11 @@
 
         <div class="flex space-x-4 mb-4 items-end">
           <div>
-            <label class="block text-sm font-medium text-gray-700">Начало</label>
+            <label class="block text-sm font-medium text-gray-700">📅 Начало</label>
             <input type="date" x-model="startDate" @change="updateChart()" class="border p-1 rounded">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700">Конец</label>
+            <label class="block text-sm font-medium text-gray-700">📅 Конец</label>
             <input type="date" x-model="endDate" @change="updateChart()" class="border p-1 rounded">
           </div>
         </div>
@@ -100,6 +112,10 @@
         sortAsc: false,
         hideSmallSample: true,
 
+        // Main table date filter
+        tableStartDate: '',
+        tableEndDate: '',
+
         // Chart state
         showRoiModal: false,
         chartInstance: null,
@@ -111,51 +127,84 @@
         headers: [
           { field: "username", label: "👤 Имя / ID", tooltip: "" },
           { field: "games_played", label: "🎲 Игры (шт)", tooltip: "" },
-          { field: "total_buyin", label: "💰 Объём закупов (EUR)", tooltip: "Общий объём закупов за всё время" },
-          { field: "avg_buyins_per_game", label: "📊 Ср. кол-во закупов (шт)", tooltip: "Среднее количество закупов за одну игру" },
+          { field: "total_buyin", label: "💰 Объём закупов (EUR)", tooltip: "Общий объём закупов за выбранный период" },
+          { field: "avg_buyins_per_game", label: "📊 Ср. кол-во закупов (шт)", tooltip: "Среднее количество закупов за одну игру за выбранный период" },
           { field: "profit", label: "📈 Прибыль (EUR)", tooltip: "" },
-          { field: "roi", label: "📉 ROI (%)", tooltip: "Окупаемость инвестиций: отношение чистой прибыли к сумме всех закупов" },
+          { field: "roi", label: "📉 ROI (%)", tooltip: "Return on Investment (ROI) — окупаемость вложений за выбранный период. Рассчитывается как отношение чистой прибыли (выигрыш минус закуп) к общей сумме закупов. Формула: ((Profit / Total Buyin) * 100%)." },
         ],
 
         async init() {
-          // Set default dates
-          const today = new Date();
-          const twoMonthsAgo = new Date();
-          twoMonthsAgo.setMonth(today.getMonth() - 2);
+          // Set default dates for main table: current year
+          const now = new Date();
+          const startOfYear = new Date(now.getFullYear(), 0, 1);
 
-          this.endDate = today.toISOString().split('T')[0];
-          this.startDate = twoMonthsAgo.toISOString().split('T')[0];
+          const formatDate = (d) => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+          };
 
+          this.tableStartDate = formatDate(startOfYear);
+          this.tableEndDate = formatDate(now);
+
+          // Fetch users
           const res = await fetch(`${API_URL}/api/users`);
-          console.log("Fetching users from:", `${API_URL}/api/users`);
           const userList = await res.json();
-          console.log("User list received:", userList);
 
+          // Fetch full actions history for each user
           const enriched = await Promise.all(
             userList.users.map(async (user) => {
               try {
-                const statsRes = await fetch(
-                  `${API_URL}/api/stats/${user.user_id}`,
-                );
-                const stats = await statsRes.json();
-                return { ...user, stats };
+                const actionsRes = await fetch(`${API_URL}/api/stats/${user.user_id}/actions`);
+                const data = await actionsRes.json();
+                return { ...user, actions: data.actions };
               } catch (e) {
-                console.error("Error fetching stats for user:", user.user_id, e);
-                return {
-                  ...user,
-                  stats: {
-                    games_played: 0,
-                    total_buyin: 0,
-                    avg_buyins_per_game: 0,
-                    profit: 0,
-                    roi: 0,
-                  },
-                };
+                console.error("Error fetching actions for user:", user.user_id, e);
+                return { ...user, actions: [] };
               }
-            }),
+            })
           );
 
           this.users = enriched;
+        },
+
+        calculateStats(actions, startStr, endStr) {
+          const start = new Date(startStr + 'T00:00:00').getTime();
+          const end = new Date(endStr + 'T23:59:59').getTime();
+
+          const filtered = actions.filter(a => {
+            const t = new Date(a.timestamp).getTime();
+            return t >= start && t <= end;
+          });
+
+          const games = new Set();
+          let totalBuyin = 0;
+          let totalQuit = 0;
+          let buyinCount = 0;
+
+          filtered.forEach(a => {
+            games.add(a.game_id);
+            if (a.action === 'buyin') {
+              totalBuyin += a.amount || 0;
+              buyinCount++;
+            } else if (a.action === 'quit') {
+              totalQuit += a.amount || 0;
+            }
+          });
+
+          const gamesPlayed = games.size;
+          const profit = totalQuit - totalBuyin;
+          const roi = totalBuyin > 0 ? (profit / totalBuyin * 100) : 0;
+          const avgBuyins = gamesPlayed > 0 ? (buyinCount / gamesPlayed) : 0;
+
+          return {
+            games_played: gamesPlayed,
+            total_buyin: totalBuyin,
+            avg_buyins_per_game: avgBuyins,
+            profit: profit,
+            roi: roi
+          };
         },
 
         setSort(field) {
@@ -168,21 +217,34 @@
         },
 
         get filteredAndSorted() {
-          const filtered = this.users.filter((u) => {
+          // Add displayStats to each user based on current table date range
+          const withStats = this.users.map(u => ({
+            ...u,
+            displayStats: this.calculateStats(u.actions, this.tableStartDate, this.tableEndDate)
+          }));
+
+          const filtered = withStats.filter((u) => {
             const name = u.username?.toLowerCase() ?? "";
             const id = u.user_id.toString();
             const nameMatches =
               name.includes(this.search.toLowerCase()) || id.includes(this.search);
-            const sampleOk = !this.hideSmallSample || u.stats.games_played >= 3;
+            const sampleOk = !this.hideSmallSample || u.displayStats.games_played >= 3;
             return nameMatches && sampleOk;
           });
 
           return filtered.sort((a, b) => {
-            const valA = a.stats[this.sortField];
-            const valB = b.stats[this.sortField];
-
-            if (valA === valB) return 0;
-            return this.sortAsc ? valA - valB : valB - valA;
+            let valA, valB;
+            if (this.sortField === 'username') {
+              valA = a.username || a.user_id.toString();
+              valB = b.username || b.user_id.toString();
+              if (valA === valB) return 0;
+              return this.sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            } else {
+              valA = a.displayStats[this.sortField];
+              valB = b.displayStats[this.sortField];
+              if (valA === valB) return 0;
+              return this.sortAsc ? valA - valB : valB - valA;
+            }
           });
         },
 
