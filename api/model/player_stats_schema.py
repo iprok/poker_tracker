@@ -6,22 +6,19 @@ from domain.entity.player_action import PlayerAction
 
 
 class PlayerActionResponse(BaseModel):
-    id: int
-    user_id: int
     game_id: int
-    action: str
+    action: int  # 1: buyin, 2: quit
     amount: Optional[float]
-    timestamp: datetime.datetime
+    timestamp: int  # Unix timestamp
 
     @classmethod
     def from_domain(cls, action: PlayerAction) -> PlayerActionResponse:
+        action_map = {"buyin": 1, "quit": 2}
         return cls(
-            id=action.id,
-            user_id=action.user_id,
             game_id=action.game_id,
-            action=action.action,
+            action=action_map.get(action.action, 0),
             amount=action.amount,
-            timestamp=action.timestamp,
+            timestamp=int(action.timestamp.timestamp()),
         )
 
 

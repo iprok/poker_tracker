@@ -58,7 +58,7 @@ function userStatsTable() {
             let earliest = new Date();
             this.users.forEach(u => {
                 u.actions.forEach(a => {
-                    const d = new Date(a.timestamp);
+                    const d = new Date(a.timestamp * 1000);
                     if (d < earliest) earliest = d;
                 });
             });

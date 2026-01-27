@@ -10,7 +10,7 @@ function calculateStats(actions, startStr, endStr) {
     const end = new Date(endStr + 'T23:59:59').getTime();
 
     const filtered = actions.filter(a => {
-        const t = new Date(a.timestamp).getTime();
+        const t = a.timestamp * 1000;
         return t >= start && t <= end;
     });
 
@@ -21,10 +21,10 @@ function calculateStats(actions, startStr, endStr) {
 
     filtered.forEach(a => {
         games.add(a.game_id);
-        if (a.action === 'buyin') {
+        if (a.action === 1) { // buyin
             totalBuyin += a.amount || 0;
             buyinCount++;
-        } else if (a.action === 'quit') {
+        } else if (a.action === 2) { // quit
             totalQuit += a.amount || 0;
         }
     });
@@ -47,20 +47,20 @@ function calculateRoiHistory(actions) {
     if (!actions || actions.length === 0) return [];
 
     // Sort actions by timestamp
-    const sorted = [...actions].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    const sorted = [...actions].sort((a, b) => a.timestamp - b.timestamp);
 
     const dailyRoiSet = {};
     let cumulativeBuyin = 0;
     let cumulativeQuit = 0;
 
     sorted.forEach(a => {
-        if (a.action === 'buyin') {
+        if (a.action === 1) { // buyin
             cumulativeBuyin += a.amount || 0;
-        } else if (a.action === 'quit') {
+        } else if (a.action === 2) { // quit
             cumulativeQuit += a.amount || 0;
         }
 
-        const currentDate = a.timestamp.split('T')[0];
+        const currentDate = new Date(a.timestamp * 1000).toISOString().split('T')[0];
         const roi = cumulativeBuyin > 0 ? ((cumulativeQuit - cumulativeBuyin) / cumulativeBuyin) * 100 : 0;
         dailyRoiSet[currentDate] = parseFloat(roi.toFixed(1));
     });
