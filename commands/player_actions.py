@@ -18,7 +18,6 @@ from utils import format_datetime, format_datetime_to_date, get_user_info
 from config import (
     CHIP_VALUE,
     CHIP_COUNT,
-    CHIP_LIMIT,
     CURRENCY,
     SHOW_SUMMARY_ON_BUYIN,
     SHOW_SUMMARY_ON_QUIT,
@@ -128,7 +127,7 @@ class PlayerActions:
             return
 
         # Проверяем кратность
-        step = CHIP_LIMIT
+        step = int(CHIP_COUNT / CHIP_VALUE / 2)
         if chips_left % step != 0:
             await MessageSender.send_to_current_channel(
                 update,

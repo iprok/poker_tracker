@@ -7,7 +7,6 @@ BOT_TOKEN = config["bot_token"]
 CHANNEL_ID = config["channel_id"]
 CHIP_VALUE = config["chip_value"]
 CHIP_COUNT = config["chip_count"]
-CHIP_LIMIT = config["chip_limit"]
 CURRENCY = config["currency"]
 TIMEZONE = config["timezone"]
 USE_TABLE = config.get("use_table", True)
