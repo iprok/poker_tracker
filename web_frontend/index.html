@@ -17,15 +17,28 @@
     <div class="flex flex-wrap gap-4 mb-4 items-end bg-white p-4 rounded shadow border border-gray-200">
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">📅 Начало периода</label>
-        <input type="date" x-model="tableStartDate" class="border p-2 rounded w-40">
+        <input type="date" x-model="tableStartDate" class="border p-2 rounded w-40 h-[42px]">
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">📅 Конец периода</label>
-        <input type="date" x-model="tableEndDate" class="border p-2 rounded w-40">
+        <input type="date" x-model="tableEndDate" class="border p-2 rounded w-40 h-[42px]">
       </div>
-      <div class="flex-grow">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">&nbsp;</label>
+        <div class="flex gap-2">
+          <button @click="setAllTime()"
+            class="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded shadow transition whitespace-nowrap h-[42px] flex items-center justify-center">
+            За всё время
+          </button>
+          <button @click="setThisYear()"
+            class="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded shadow transition whitespace-nowrap h-[42px] flex items-center justify-center">
+            За этот год
+          </button>
+        </div>
+      </div>
+      <div class="ml-10 flex-grow">
         <label class="block text-sm font-medium text-gray-700 mb-1">🔍 Поиск</label>
-        <input type="text" x-model="search" placeholder="Имя или ID" class="border p-2 rounded w-full" />
+        <input type="text" x-model="search" placeholder="Имя или ID" class="border p-2 rounded w-full h-[42px]" />
       </div>
     </div>
 
@@ -205,6 +218,41 @@
             profit: profit,
             roi: roi
           };
+        },
+
+        setAllTime() {
+          let earliest = new Date();
+          this.users.forEach(u => {
+            u.actions.forEach(a => {
+              const d = new Date(a.timestamp);
+              if (d < earliest) earliest = d;
+            });
+          });
+
+          const formatDate = (d) => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+          };
+
+          this.tableStartDate = formatDate(earliest);
+          this.tableEndDate = formatDate(new Date());
+        },
+
+        setThisYear() {
+          const now = new Date();
+          const startOfYear = new Date(now.getFullYear(), 0, 1);
+
+          const formatDate = (d) => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+          };
+
+          this.tableStartDate = formatDate(startOfYear);
+          this.tableEndDate = formatDate(now);
         },
 
         setSort(field) {
