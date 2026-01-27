@@ -76,10 +76,10 @@
                 </template>
               </td>
               <td class="p-2" x-text="user.displayStats.games_played"></td>
-              <td class="p-2" x-text="user.displayStats.total_buyin.toFixed(2)"></td>
-              <td class="p-2" x-text="user.displayStats.avg_buyins_per_game.toFixed(2)"></td>
-              <td class="p-2" x-text="user.displayStats.profit.toFixed(2)"></td>
-              <td class="p-2" x-text="user.displayStats.roi.toFixed(1)"></td>
+              <td class="p-2" x-text="Math.round(user.displayStats.total_buyin)"></td>
+              <td class="p-2" x-text="Number(user.displayStats.avg_buyins_per_game.toFixed(2))"></td>
+              <td class="p-2" x-text="Number(user.displayStats.profit.toFixed(2))"></td>
+              <td class="p-2" x-text="Number(user.displayStats.roi.toFixed(1))"></td>
             </tr>
           </template>
         </tbody>
