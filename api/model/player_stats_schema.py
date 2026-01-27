@@ -2,26 +2,7 @@ from __future__ import annotations
 import datetime
 from typing import List, Optional
 from pydantic import BaseModel
-from domain.model.player_statistics import PlayerStatistics
 from domain.entity.player_action import PlayerAction
-
-
-class PlayerStatsResponse(BaseModel):
-    games_played: int
-    total_buyin: float
-    avg_buyins_per_game: float
-    profit: float
-    roi: float
-
-    @classmethod
-    def from_domain(cls, stats: PlayerStatistics) -> PlayerStatsResponse:
-        return cls(
-            games_played=stats.games_num,
-            total_buyin=stats.total_buyin_money,
-            avg_buyins_per_game=stats.average_buyin_number,
-            profit=stats.profit_money,
-            roi=stats.roi,
-        )
 
 
 class PlayerActionResponse(BaseModel):

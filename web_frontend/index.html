@@ -220,6 +220,31 @@
           };
         },
 
+        calculateRoiHistory(actions) {
+          if (!actions || actions.length === 0) return [];
+
+          // Sort actions by timestamp
+          const sorted = [...actions].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+          const dailyRoiSet = {};
+          let cumulativeBuyin = 0;
+          let cumulativeQuit = 0;
+
+          sorted.forEach(a => {
+            if (a.action === 'buyin') {
+              cumulativeBuyin += a.amount || 0;
+            } else if (a.action === 'quit') {
+              cumulativeQuit += a.amount || 0;
+            }
+
+            const currentDate = a.timestamp.split('T')[0];
+            const roi = cumulativeBuyin > 0 ? ((cumulativeQuit - cumulativeBuyin) / cumulativeBuyin) * 100 : 0;
+            dailyRoiSet[currentDate] = parseFloat(roi.toFixed(1));
+          });
+
+          return Object.entries(dailyRoiSet).map(([date, roi]) => ({ date, roi }));
+        },
+
         setAllTime() {
           let earliest = new Date();
           this.users.forEach(u => {
@@ -301,18 +326,14 @@
           this.showRoiModal = true;
 
           try {
-            const res = await fetch(`${API_URL}/api/stats/${user.user_id}/roi`);
-            if (!res.ok) throw new Error('Failed to fetch ROI history');
-            this.roiData = await res.json();
+            this.roiData = this.calculateRoiHistory(user.actions);
 
             // Set dates based on data
             if (this.roiData.length > 0) {
-              // Sort by date just in case
-              const sortedData = [...this.roiData].sort((a, b) => new Date(a.date) - new Date(b.date));
-              this.startDate = sortedData[0].date;
-              this.endDate = sortedData[sortedData.length - 1].date;
+              // Data is already sorted by date in calculateRoiHistory
+              this.startDate = this.roiData[0].date;
+              this.endDate = this.roiData[this.roiData.length - 1].date;
             } else {
-              // Fallback to today if no data (though button shouldn't be visible)
               const today = new Date().toISOString().split('T')[0];
               this.startDate = today;
               this.endDate = today;
