@@ -27,7 +27,8 @@
         <thead class="bg-gray-200">
           <tr>
             <template x-for="header in headers" :key="header.field">
-              <th class="p-2 text-left cursor-pointer select-none" @click="setSort(header.field)">
+              <th class="p-2 text-left cursor-pointer select-none" @click="setSort(header.field)"
+                :title="header.tooltip">
                 <span x-text="header.label"></span>
                 <span x-show="sortField === header.field">
                   <span x-show="sortAsc">▲</span>
@@ -108,12 +109,12 @@
         endDate: '',
 
         headers: [
-          { field: "username", label: "👤 Имя / ID" },
-          { field: "games_played", label: "🎲 Игры (шт)" },
-          { field: "total_buyin", label: "💰 Закуп (EUR)" },
-          { field: "avg_buyins_per_game", label: "📊 Ср. закуп (шт)" },
-          { field: "profit", label: "📈 Прибыль (EUR)" },
-          { field: "roi", label: "📉 ROI (%)" },
+          { field: "username", label: "👤 Имя / ID", tooltip: "" },
+          { field: "games_played", label: "🎲 Игры (шт)", tooltip: "" },
+          { field: "total_buyin", label: "💰 Объём закупов (EUR)", tooltip: "Общий объём закупов за всё время" },
+          { field: "avg_buyins_per_game", label: "📊 Ср. кол-во закупов (шт)", tooltip: "Среднее количество закупов за одну игру" },
+          { field: "profit", label: "📈 Прибыль (EUR)", tooltip: "" },
+          { field: "roi", label: "📉 ROI (%)", tooltip: "Окупаемость инвестиций: отношение чистой прибыли к сумме всех закупов" },
         ],
 
         async init() {
