@@ -7,7 +7,9 @@ from engine import Base, Engine
 class PlayerAction(Base):
     __tablename__ = "player_actions"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    game_id: Mapped[int] = mapped_column(Integer, ForeignKey("games.id"), nullable=False)
+    game_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("games.id"), nullable=False
+    )
     user_id: Mapped[int] = mapped_column(Integer, nullable=False)
     username: Mapped[str | None] = mapped_column(String, nullable=True)
     action: Mapped[str] = mapped_column(String, nullable=False)

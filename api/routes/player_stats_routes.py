@@ -31,9 +31,7 @@ def get_player_actions(user_id: int):
     session.close()
 
     if not actions:
-        raise HTTPException(
-            status_code=404, detail="No actions found for this user."
-        )
+        raise HTTPException(status_code=404, detail="No actions found for this user.")
 
     response = PlayerActionListResponse(
         actions=[PlayerActionResponse.from_domain(a) for a in actions]
