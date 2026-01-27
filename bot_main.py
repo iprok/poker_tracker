@@ -51,7 +51,7 @@ async def post_init(application: Application) -> None:
     )
     application.add_handler(
         MessageHandler(
-            filters.Regex(rf"^\s*/quit(@{bn})?( (0|\d{4,5}))?$"),
+            filters.Regex(rf"^\s*/quit(@{bn})?( (0|\d{{4,5}}))?$"),
             PlayerActions.handle_quit_command,
         )
     )
