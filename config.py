@@ -5,6 +5,7 @@ with open("config.json", "r") as file:
 
 BOT_TOKEN = config["bot_token"]
 CHANNEL_ID = config["channel_id"]
+CHANNEL_TOURNAMENT_ID = config["channel_tournament_id"]
 CHIP_VALUE = config["chip_value"]
 CHIP_COUNT = config["chip_count"]
 CURRENCY = config["currency"]
@@ -15,3 +16,4 @@ SHOW_SUMMARY_ON_QUIT = config["show_summary_on_quit"]
 LOG_AMOUNT_LAST_GAMES = config.get("log_amount_last_games", 3)
 LOG_AMOUNT_LAST_ACTIONS = config.get("log_amount_last_actions", 20)
 STATS_BLOCKED_USER_IDS = config.get("stats_blocked_user_ids", [])
+ADMIN_IDS = config.get("admin_ids", [])
