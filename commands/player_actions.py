@@ -24,6 +24,7 @@ from config import (
     LOG_AMOUNT_LAST_GAMES,
     LOG_AMOUNT_LAST_ACTIONS,
     STATS_BLOCKED_USER_IDS,
+    ADMIN_IDS,
 )
 from decorators import restrict_to_members, restrict_to_members_and_private
 import re
@@ -472,10 +473,25 @@ class PlayerActions:
                 [KeyboardButton("/log"), KeyboardButton("/help")],
             ]
         else:  # Если это личный чат с ботом
-            keyboard = [
-                [KeyboardButton("/startgame"), KeyboardButton("/endgame")],
-                [KeyboardButton("/close_menu")],
-            ]
+            is_admin = (
+                update.effective_user.id in ADMIN_IDS
+                if update.effective_user
+                else False
+            )
+
+            keyboard = []
+            keyboard.append([KeyboardButton("/startgame"), KeyboardButton("/endgame")])
+
+            # Отображаем кнопки только для администраторов
+            if is_admin:
+                keyboard.append(
+                    [
+                        KeyboardButton("/start_tournament"),
+                        KeyboardButton("/end_tournament"),
+                    ]
+                )
+
+            keyboard.append([KeyboardButton("/close_menu")])
 
         reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
         await MessageSender.send_to_current_channel(

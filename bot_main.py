@@ -3,13 +3,27 @@ from telegram.ext import Application, MessageHandler, filters
 from telegram import BotCommandScopeChat, BotCommandScopeAllPrivateChats
 from commands.game_management import GameManagement
 from commands.player_actions import PlayerActions
+from commands.tournament_management import TournamentManagement
 from config import BOT_TOKEN, CHANNEL_ID
+from di_container import DIContainer
+from engine import session
 
 
 async def post_init(application: Application) -> None:
     """Настройка команд после запуска бота."""
     bot_info = await application.bot.get_me()
     bn = bot_info.username
+
+    # Initialize DI container
+    di_container = DIContainer(db_session=session)
+    tournament_management = TournamentManagement(
+        start_tournament_use_case=di_container.get_start_tournament_use_case(),
+        end_tournament_use_case=di_container.get_end_tournament_use_case(),
+        register_player_use_case=di_container.get_register_player_use_case(),
+        eliminate_player_use_case=di_container.get_eliminate_player_use_case(),
+        notification_public_tournament_channel_service=di_container.get_notification_public_tournament_channel_service(),
+        notification_bot_channel_service=di_container.get_notification_bot_channel_service(),
+    )
 
     try:
         await application.bot.set_my_commands(
@@ -91,6 +105,30 @@ async def post_init(application: Application) -> None:
     )
     application.add_handler(
         MessageHandler(filters.Regex(rf"^\s*/mystats(@{bn})?$"), PlayerActions.stats)
+    )
+    application.add_handler(
+        MessageHandler(
+            filters.Regex(rf"^\s*/start_tournament(@{bn})?$"),
+            tournament_management.start_tournament,
+        )
+    )
+    application.add_handler(
+        MessageHandler(
+            filters.Regex(rf"^\s*/end_tournament(@{bn})?$"),
+            tournament_management.end_tournament,
+        )
+    )
+    application.add_handler(
+        MessageHandler(
+            filters.Regex(rf"^\s*/join_tournament(@{bn})?$"),
+            tournament_management.register_player,
+        )
+    )
+    application.add_handler(
+        MessageHandler(
+            filters.Regex(rf"^\s*/out_tournament(@{bn})?$"),
+            tournament_management.eliminate_player,
+        )
     )
 
 
