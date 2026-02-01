@@ -33,7 +33,6 @@ class Tournament(Base):
         "Player", foreign_keys=[ended_player_id]
     )
 
-    # напиши функци
     def get_duration_str(self) -> str:
         # Calculate duration
         if self.start_time.tzinfo is None:
