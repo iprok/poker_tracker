@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
 from domain.scheme.player_data import PlayerData
 from domain.entity.player_tournament_action import (
-    TournamentActionType,
     PlayerTournamentAction,
 )
 from domain.repository.player_repository import PlayerRepository
@@ -29,41 +28,41 @@ class EliminatePlayerUseCase:
 
         player = self._player_repository.get_or_create(player_data)
 
-        # Retrieve JOIN action to calculate duration
-        join_action = self._player_tournament_action_repository.find_action(
-            active_tournament.id, player.id, TournamentActionType.JOIN
+        # Retrieve JOIN record (which is the only record for this player/tournament)
+        action = self._player_tournament_action_repository.find_action(
+            active_tournament.id, player.id
         )
 
-        if not join_action:
+        if not action:
             raise RuntimeError("Вы не участвуете в этом турнире.")
 
-        if self._player_tournament_action_repository.is_player_eliminated(
-            active_tournament.id, player.id
-        ):
+        if action.rank is not None:
             raise RuntimeError("Вы уже выбыли из этого турнира.")
 
         # Calculate Rank
-        total_players = self._player_tournament_action_repository.count_actions(
-            active_tournament.id, TournamentActionType.JOIN
+        total_players = self._player_tournament_action_repository.count_total_players(
+            active_tournament.id
         )
-        eliminated_count = self._player_tournament_action_repository.count_actions(
-            active_tournament.id, TournamentActionType.ELIMINATE
+        eliminated_count = (
+            self._player_tournament_action_repository.count_eliminated_players(
+                active_tournament.id
+            )
         )
         rank = total_players - eliminated_count
 
         # Calculate Duration
         now = datetime.now(timezone.utc)
-        created_at = join_action.created_at
+        created_at = action.created_at
         if created_at.tzinfo is None:
             created_at = created_at.replace(tzinfo=timezone.utc)
 
         duration_seconds = int((now - created_at).total_seconds())
 
-        action = self._player_tournament_action_repository.add_action(
+        action = self._player_tournament_action_repository.eliminate_player(
             tournament_id=active_tournament.id,
             player_id=player.id,
-            action_type=TournamentActionType.ELIMINATE,
             rank=rank,
             duration_seconds=duration_seconds,
+            ended_at=now,
         )
         return action

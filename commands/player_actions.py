@@ -14,6 +14,7 @@ from sqlalchemy.sql import func
 from engine import Session
 from domain.repository.game_repository import GameRepository
 from domain.repository.player_action_repository import PlayerActionRepository
+from domain.repository.tournament_repository import TournamentRepository
 from utils import format_datetime, format_datetime_to_date, get_user_info
 from config import (
     CHIP_VALUE,
@@ -31,6 +32,7 @@ import re
 
 from domain.service.player_statistics_service import PlayerStatisticsService
 from domain.model.player_statistics import PlayerStatistics
+from config import CHANNEL_TOURNAMENT_ID
 
 
 class PlayerActions:
@@ -464,10 +466,14 @@ class PlayerActions:
     @staticmethod
     @restrict_to_members
     async def show_menu(update, context):
-        # Определяем, откуда пришло сообщение
-        if not await PermissionChecker.check_is_chat_private(
+        chat_id = update.effective_chat.id
+
+        # Если это канал турнира, показываем только сводку турнира
+        if str(chat_id) == str(CHANNEL_TOURNAMENT_ID):
+            keyboard = [[KeyboardButton("/summary_tournament")]]
+        elif not await PermissionChecker.check_is_chat_private(
             update, context
-        ):  # Если это группа
+        ):  # Если это обычная группа
             keyboard = [
                 [KeyboardButton("/summary"), KeyboardButton("/summarygames")],
                 [KeyboardButton("/log"), KeyboardButton("/help")],

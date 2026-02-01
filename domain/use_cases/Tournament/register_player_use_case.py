@@ -1,4 +1,3 @@
-from domain.entity.player_tournament_action import TournamentActionType
 from domain.scheme.player_data import PlayerData
 from domain.repository.player_repository import PlayerRepository
 from domain.repository.player_tournament_action_repository import (
@@ -31,13 +30,15 @@ class RegisterPlayerUseCase:
         ):
             raise RuntimeError("Вы уже участвуете в этом турнире.")
 
+        # In the new session model, joined means we have a record.
+        # If we have a record and rank is not None, they are eliminated.
         if self._player_tournament_action_repository.is_player_eliminated(
             active_tournament.id, player.id
         ):
             raise RuntimeError("Вы выбыли из турнира и не можете вернуться.")
 
-        action = self._player_tournament_action_repository.add_action(
-            active_tournament.id, player.id, TournamentActionType.JOIN
+        action = self._player_tournament_action_repository.register_player(
+            active_tournament.id, player.id
         )
 
         return action

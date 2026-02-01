@@ -16,6 +16,9 @@ from domain.use_cases.Tournament.start_tournament_use_case import StartTournamen
 from domain.use_cases.Tournament.end_tournament_use_case import EndTournamentUseCase
 from domain.use_cases.Tournament.register_player_use_case import RegisterPlayerUseCase
 from domain.use_cases.Tournament.eliminate_player_use_case import EliminatePlayerUseCase
+from domain.use_cases.Tournament.get_tournament_summary_use_case import (
+    GetTournamentSummaryUseCase,
+)
 
 
 class DIContainer:
@@ -95,3 +98,13 @@ class DIContainer:
                 NotificationBotChannelService()
             )
         return self._instances["notification_bot_channel_service"]
+
+    def get_tournament_summary_use_case(self) -> GetTournamentSummaryUseCase:
+        if "get_tournament_summary_use_case" not in self._instances:
+            self._instances["get_tournament_summary_use_case"] = (
+                GetTournamentSummaryUseCase(
+                    tournament_repository=self.get_tournament_repository(),
+                    player_tournament_action_repository=self.get_player_tournament_action_repository(),
+                )
+            )
+        return self._instances["get_tournament_summary_use_case"]

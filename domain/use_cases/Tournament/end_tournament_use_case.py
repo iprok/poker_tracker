@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 from domain.scheme.player_data import PlayerData
-from domain.entity.player_tournament_action import TournamentActionType
 from domain.repository.tournament_repository import TournamentRepository
 from domain.repository.player_repository import PlayerRepository
 from domain.repository.player_tournament_action_repository import (
@@ -28,11 +27,13 @@ class EndTournamentUseCase:
             raise RuntimeError("Нельзя завершить турнир. Активный турнир не найден.")
 
         # Check if all players are eliminated
-        total_players = self._player_tournament_action_repository.count_actions(
-            active_tournament.id, TournamentActionType.JOIN
+        total_players = self._player_tournament_action_repository.count_total_players(
+            active_tournament.id
         )
-        eliminated_count = self._player_tournament_action_repository.count_actions(
-            active_tournament.id, TournamentActionType.ELIMINATE
+        eliminated_count = (
+            self._player_tournament_action_repository.count_eliminated_players(
+                active_tournament.id
+            )
         )
 
         if total_players > eliminated_count:

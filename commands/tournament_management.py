@@ -9,6 +9,9 @@ from domain.use_cases.Tournament.start_tournament_use_case import StartTournamen
 from domain.use_cases.Tournament.end_tournament_use_case import EndTournamentUseCase
 from domain.use_cases.Tournament.register_player_use_case import RegisterPlayerUseCase
 from domain.use_cases.Tournament.eliminate_player_use_case import EliminatePlayerUseCase
+from domain.use_cases.Tournament.get_tournament_summary_use_case import (
+    GetTournamentSummaryUseCase,
+)
 from domain.service.notification_public_channel_service import (
     NotificationPublicChannelService,
 )
@@ -16,7 +19,7 @@ from domain.service.notification_bot_channel_service import (
     NotificationBotChannelService,
 )
 from domain.scheme.player_data import PlayerData
-from utils import get_user_info
+from utils import get_user_info, setup_bot_commands
 
 
 class TournamentManagement:
@@ -26,6 +29,7 @@ class TournamentManagement:
         end_tournament_use_case: EndTournamentUseCase,
         register_player_use_case: RegisterPlayerUseCase,
         eliminate_player_use_case: EliminatePlayerUseCase,
+        get_tournament_summary_use_case: GetTournamentSummaryUseCase,
         notification_public_tournament_channel_service: NotificationPublicChannelService,
         notification_bot_channel_service: NotificationBotChannelService,
     ) -> None:
@@ -33,10 +37,49 @@ class TournamentManagement:
         self._end_tournament_use_case = end_tournament_use_case
         self._register_player_use_case = register_player_use_case
         self._eliminate_player_use_case = eliminate_player_use_case
+        self._get_tournament_summary_use_case = get_tournament_summary_use_case
         self._notification_public_tournament_channel_service = (
             notification_public_tournament_channel_service
         )
         self._notification_bot_channel_service = notification_bot_channel_service
+
+    async def summary_tournament(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> None:
+        try:
+            summary = await self._get_tournament_summary_use_case.execute()
+            tournament = summary["tournament"]
+
+            if not tournament:
+                await self._notification_bot_channel_service.reply(
+                    update, "❌ Турниры ещё не проводились."
+                )
+                return
+
+            status = "Активный" if summary["is_active"] else "Завершенный"
+            message = [f"📊 <b>Турнир #{tournament.id}</b> ({status})\n"]
+
+            if not summary["players"]:
+                message.append("Игроков пока нет.")
+            else:
+                for idx, player_info in enumerate(summary["players"], 1):
+                    player = player_info["player"]
+                    rank = player_info["rank"]
+                    duration = player_info.get("duration_str")
+
+                    rank_str = f"🏅 Место: {rank}" if rank else "🎮 В игре"
+                    duration_str = f" (⏱ {duration})" if duration else ""
+                    message.append(
+                        f"{idx}. <b>{player.get_name()}</b> (@{player.get_user_name()}) — {rank_str}{duration_str}"
+                    )
+
+            await self._notification_bot_channel_service.reply(
+                update, "\n".join(message)
+            )
+        except Exception as e:
+            await self._notification_bot_channel_service.reply(
+                update, f"❌ Ошибка при получении сводки: {str(e)}"
+            )
 
     async def start_tournament(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
@@ -51,8 +94,12 @@ class TournamentManagement:
             await self._notification_public_tournament_channel_service.notify(
                 context.bot,
                 f"🏆 Турнир #{tournament.id} начат!\n"
-                f"Для входа в турнир используйте команду /join_tournament",
+                f"В личном чате с ботом появились кнопки:\n"
+                f"<b>Вступить в турнир</b>\n"
+                f"<b>Покинуть турнир</b>\n",
             )
+            # Update dynamic commands
+            await setup_bot_commands(context.bot)
         except RuntimeError as e:
             await self._notification_bot_channel_service.reply(
                 update, f"❌ Ошибка: {str(e)}"
@@ -78,6 +125,8 @@ class TournamentManagement:
                 f"🛑 Турнир завершен.\n"
                 f"⏱️ Длительность: {tournament.get_duration_str()}",
             )
+            # Update dynamic commands
+            await setup_bot_commands(context.bot)
         except RuntimeError as e:
             await self._notification_bot_channel_service.reply(
                 update, f"❌ Ошибка: {str(e)}"
