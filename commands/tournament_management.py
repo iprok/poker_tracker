@@ -102,7 +102,8 @@ class TournamentManagement:
                     rank = player_info["rank"]
                     duration = player_info.get("duration_str")
 
-                    rank_str = f"🏅 Место: {rank}" if rank else "🎮 В игре"
+                    medal = "🏆 " if rank and 1 <= rank <= 3 else "🏅 "
+                    rank_str = f"{medal}Место: {rank}" if rank else "🎮 В игре"
                     duration_str = f" (⏱ {duration})" if duration else ""
                     message.append(
                         f"{idx}. <b>{player.get_name()}</b> (@{player.get_user_name()}) — {rank_str}{duration_str}"
@@ -133,6 +134,12 @@ class TournamentManagement:
                 f"<b>Вступить в турнир</b>\n"
                 f"<b>Покинуть турнир</b>\n",
             )
+
+            await self._notification_bot_channel_service.reply(
+                update,
+                f"🏆 Турнир #{tournament.id} начат!\n"
+            )
+
             # Update dynamic commands
             await setup_bot_commands(context.bot)
         except RuntimeError as e:
@@ -160,6 +167,12 @@ class TournamentManagement:
                 f"🛑 Турнир завершен.\n"
                 f"⏱️ Длительность: {tournament.get_duration_str()}",
             )
+
+            await self._notification_bot_channel_service.reply(
+                update,
+                f"🛑 Турнир завершен.\n"
+            )
+
             # Update dynamic commands
             await setup_bot_commands(context.bot)
         except RuntimeError as e:
@@ -208,7 +221,7 @@ class TournamentManagement:
             await self._notification_public_tournament_channel_service.notify(
                 context.bot,
                 f"☠️ Игрок <b>{action.get_player().get_name()}</b> (@{action.get_player().get_user_name()}) выбыл из турнира.\n"
-                f"🏅 Место: {action.rank}\n"
+                f"{'🏆 ' if action.rank and 1 <= action.rank <= 3 else '🏅 '}Место: {action.rank}\n"
                 f"⏱️ Время в игре: {action.get_duration_str()}",
             )
         except RuntimeError as e:

@@ -30,7 +30,7 @@ async def setup_bot_commands(bot) -> None:
             commands.extend(
                 [
                     ("join_tournament", "Вступить в турнир"),
-                    ("out_tournament", "Покинуть турнир"),
+                    ("leave_tournament", "Покинуть турнир"),
                 ]
             )
 
@@ -166,7 +166,7 @@ async def post_init(application: Application) -> None:
     )
     application.add_handler(
         MessageHandler(
-            filters.Regex(rf"^\s*/out_tournament(@{bn})?$"),
+            filters.Regex(rf"^\s*/leave_tournament(@{bn})?$"),
             tournament_management.eliminate_player,
         )
     )

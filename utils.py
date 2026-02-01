@@ -99,7 +99,7 @@ async def setup_bot_commands(bot) -> None:
             commands.extend(
                 [
                     ("join_tournament", "Вступить в турнир"),
-                    ("out_tournament", "Покинуть турнир"),
+                    ("leave_tournament", "Покинуть турнир"),
                 ]
             )
 
