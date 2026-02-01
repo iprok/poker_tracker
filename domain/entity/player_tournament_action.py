@@ -18,6 +18,8 @@ class PlayerTournamentAction(Base):
     )
     player: Mapped["Player"] = relationship("Player", foreign_keys=[player_id])
     rank: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    table_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    position_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
     duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)

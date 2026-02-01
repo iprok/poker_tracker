@@ -18,6 +18,7 @@ class Tournament(Base):
     end_time: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    is_shuffled: Mapped[bool] = mapped_column(default=False)
 
     created_player_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("players.id"), nullable=True

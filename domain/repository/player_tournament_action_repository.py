@@ -35,6 +35,15 @@ class PlayerTournamentActionRepository(BaseRepository):
             self.save(action)
         return action
 
+    def update_table_and_position_assignment(
+        self, tournament_id: int, player_id: int, table_number: int, position_number: int
+    ) -> None:
+        action = self.find_action(tournament_id, player_id)
+        if action:
+            action.table_number = table_number
+            action.position_number = position_number
+            self.save(action)
+
     def find_action(
         self, tournament_id: int, player_id: int
     ) -> Optional[PlayerTournamentAction]:
@@ -69,6 +78,10 @@ class PlayerTournamentActionRepository(BaseRepository):
         return action is not None and action.rank is not None
 
     def get_active_players(self, tournament_id: int) -> List[str]:
+        players = self.find_active_player_entities(tournament_id)
+        return [f"<b>{p.get_name()}</b> (@{p.get_user_name()})" for p in players]
+
+    def find_active_player_entities(self, tournament_id: int) -> List["Player"]:
         from domain.entity.player import Player
 
         # Get players who are in the tournament but have no rank (not eliminated)
@@ -83,8 +96,7 @@ class PlayerTournamentActionRepository(BaseRepository):
             )
         )
 
-        players = self.db.scalars(query).all()
-        return [f"<b>{p.get_name()}</b> (@{p.get_user_name()})" for p in players]
+        return list(self.db.scalars(query).all())
 
     def find_actions_by_tournament_id(
         self, tournament_id: int

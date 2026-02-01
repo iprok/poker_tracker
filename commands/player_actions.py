@@ -488,12 +488,13 @@ class PlayerActions:
             keyboard = []
             keyboard.append([KeyboardButton("/startgame"), KeyboardButton("/endgame")])
 
-            # Отображаем кнопки только для администраторов
+            # Отображаем кнопки управления турниром только для администраторов
             if is_admin:
                 keyboard.append(
                     [
                         KeyboardButton("/start_tournament"),
                         KeyboardButton("/end_tournament"),
+                        KeyboardButton("/shuffle_players"),
                     ]
                 )
 

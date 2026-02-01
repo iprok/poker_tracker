@@ -19,6 +19,7 @@ from domain.use_cases.Tournament.eliminate_player_use_case import EliminatePlaye
 from domain.use_cases.Tournament.get_tournament_summary_use_case import (
     GetTournamentSummaryUseCase,
 )
+from domain.use_cases.Tournament.shuffle_players_use_case import ShufflePlayersUseCase
 
 
 class DIContainer:
@@ -108,3 +109,11 @@ class DIContainer:
                 )
             )
         return self._instances["get_tournament_summary_use_case"]
+
+    def get_shuffle_players_use_case(self) -> ShufflePlayersUseCase:
+        if "shuffle_players_use_case" not in self._instances:
+            self._instances["shuffle_players_use_case"] = ShufflePlayersUseCase(
+                tournament_repository=self.get_tournament_repository(),
+                player_tournament_action_repository=self.get_player_tournament_action_repository(),
+            )
+        return self._instances["shuffle_players_use_case"]

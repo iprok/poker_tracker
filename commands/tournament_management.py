@@ -12,6 +12,7 @@ from domain.use_cases.Tournament.eliminate_player_use_case import EliminatePlaye
 from domain.use_cases.Tournament.get_tournament_summary_use_case import (
     GetTournamentSummaryUseCase,
 )
+from domain.use_cases.Tournament.shuffle_players_use_case import ShufflePlayersUseCase
 from domain.service.notification_public_channel_service import (
     NotificationPublicChannelService,
 )
@@ -20,6 +21,7 @@ from domain.service.notification_bot_channel_service import (
 )
 from domain.scheme.player_data import PlayerData
 from utils import get_user_info, setup_bot_commands
+from config import CHANNEL_TOURNAMENT_ID
 
 
 class TournamentManagement:
@@ -30,6 +32,7 @@ class TournamentManagement:
         register_player_use_case: RegisterPlayerUseCase,
         eliminate_player_use_case: EliminatePlayerUseCase,
         get_tournament_summary_use_case: GetTournamentSummaryUseCase,
+        shuffle_players_use_case: ShufflePlayersUseCase,
         notification_public_tournament_channel_service: NotificationPublicChannelService,
         notification_bot_channel_service: NotificationBotChannelService,
     ) -> None:
@@ -38,10 +41,42 @@ class TournamentManagement:
         self._register_player_use_case = register_player_use_case
         self._eliminate_player_use_case = eliminate_player_use_case
         self._get_tournament_summary_use_case = get_tournament_summary_use_case
+        self._shuffle_players_use_case = shuffle_players_use_case
         self._notification_public_tournament_channel_service = (
             notification_public_tournament_channel_service
         )
         self._notification_bot_channel_service = notification_bot_channel_service
+
+    async def shuffle_players(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> None:
+        try:
+            result = await self._shuffle_players_use_case.execute()
+            tables = result["tables"]
+
+            message = [
+                f"🎲 <b>Рассадка игроков (Турнир #{result['tournament_id']})</b>\n"
+            ]
+
+            for i, table_players in enumerate(tables, 1):
+                message.append(f"<b>Стол №{i}</b>")
+                for j, player in enumerate(table_players, 1):
+                    message.append(
+                        f"🪑 {j}: <b>{player.get_name()}</b> (@{player.get_user_name()})"
+                    )
+                message.append("")  # Empty line between tables
+
+            await self._notification_public_tournament_channel_service.notify(
+                context.bot, "\n".join(message)
+            )
+
+            await self._notification_bot_channel_service.reply(
+                update, "✅ Игроки перемешаны. Результат отправлен в канал турнира."
+            )
+        except Exception as e:
+            await self._notification_bot_channel_service.reply(
+                update, f"❌ Ошибка при перемешивании: {str(e)}"
+            )
 
     async def summary_tournament(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE

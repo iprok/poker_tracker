@@ -55,6 +55,7 @@ async def post_init(application: Application) -> None:
         register_player_use_case=di_container.get_register_player_use_case(),
         eliminate_player_use_case=di_container.get_eliminate_player_use_case(),
         get_tournament_summary_use_case=di_container.get_tournament_summary_use_case(),
+        shuffle_players_use_case=di_container.get_shuffle_players_use_case(),
         notification_public_tournament_channel_service=di_container.get_notification_public_tournament_channel_service(),
         notification_bot_channel_service=di_container.get_notification_bot_channel_service(),
     )
@@ -155,6 +156,12 @@ async def post_init(application: Application) -> None:
         MessageHandler(
             filters.Regex(rf"^\s*/summary_tournament(@{bn})?$"),
             tournament_management.summary_tournament,
+        )
+    )
+    application.add_handler(
+        MessageHandler(
+            filters.Regex(rf"^\s*/shuffle_players(@{bn})?$"),
+            tournament_management.shuffle_players,
         )
     )
     application.add_handler(
