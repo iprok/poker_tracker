@@ -21,3 +21,5 @@ class Player(Base):
     def get_name(self) -> str:
         return self.name
 
+    def get_telegram_id(self) -> int:
+        return self.telegram_id

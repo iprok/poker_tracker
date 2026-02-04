@@ -9,6 +9,7 @@ from di_container import DIContainer
 from engine import session, Session
 from domain.repository.tournament_repository import TournamentRepository
 from telegram import BotCommandScopeChat, BotCommandScopeAllPrivateChats
+
 # Initialize database tables
 from db_init import init_db
 
@@ -60,6 +61,7 @@ async def post_init(application: Application) -> None:
         eliminate_player_use_case=di_container.get_eliminate_player_use_case(),
         get_tournament_summary_use_case=di_container.get_tournament_summary_use_case(),
         shuffle_players_use_case=di_container.get_shuffle_players_use_case(),
+        kick_player_use_case=di_container.get_kick_player_use_case(),
         notification_public_tournament_channel_service=di_container.get_notification_public_tournament_channel_service(),
         notification_bot_channel_service=di_container.get_notification_bot_channel_service(),
     )
@@ -172,6 +174,12 @@ async def post_init(application: Application) -> None:
         MessageHandler(
             filters.Regex(rf"^\s*/leave_tournament(@{bn})?$"),
             tournament_management.eliminate_player,
+        )
+    )
+    application.add_handler(
+        MessageHandler(
+            filters.Regex(rf"^\s*/kick_player_(\d+)(@{bn})?$"),
+            tournament_management.kick_player,
         )
     )
 

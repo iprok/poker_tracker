@@ -12,6 +12,9 @@ class Tournament(Base):
     __tablename__ = "tournaments"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
     start_time: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
@@ -46,3 +49,12 @@ class Tournament(Base):
         minutes, seconds = divmod(remainder, 60)
         return f"{hours:02}:{minutes:02}:{seconds:02}"
 
+    def make_tournament_started(self) -> None:
+        self.start_time = datetime.now(timezone.utc)
+        self.is_shuffled = True
+
+    def is_tournament_started(self) -> bool:
+        return self.start_time is not None and self.is_shuffled
+
+    def is_tournament_ended(self) -> bool:
+        return self.end_time is not None

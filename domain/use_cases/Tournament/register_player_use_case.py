@@ -23,12 +23,17 @@ class RegisterPlayerUseCase:
         if not active_tournament:
             raise RuntimeError("Нет активного турнира. Нельзя зарегистрироваться.")
 
+        if active_tournament.is_tournament_started():
+            raise RuntimeError("Турнир уже начался. Регистрация закрыта.")
+
         player = self._player_repository.get_or_create(player_data)
 
         if self._player_tournament_action_repository.has_player_joined(
             active_tournament.id, player.id
         ):
-            raise RuntimeError("Вы уже участвуете в этом турнире. Нельзя зарегистрироваться повторно.")
+            raise RuntimeError(
+                "Вы уже участвуете в этом турнире. Нельзя зарегистрироваться повторно."
+            )
 
         # In the new session model, joined means we have a record.
         # If we have a record and rank is not None, they are eliminated.

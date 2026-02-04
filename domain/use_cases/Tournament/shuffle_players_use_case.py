@@ -33,18 +33,26 @@ class ShufflePlayersUseCase:
         # Shuffle players randomly
         random.shuffle(players)
 
-        tournament.is_shuffled = True
+        tournament.make_tournament_started()
         self._tournament_repository.save(tournament)
 
+        # Determine number of tables (max 8 players per table, max 3 tables)
+        num_players = len(players)
+        num_tables = (num_players + 7) // 8  # Equivalent to ceil(num_players / 8)
+        if num_tables > 3:
+            num_tables = 3
+
+        # Divide players into tables as evenly as possible
         tables = []
-        if len(players) > 9:
-            # Split into 2 tables
-            mid = len(players) // 2
-            tables.append(players[:mid])
-            tables.append(players[mid:])
-        else:
-            # Single table
-            tables.append(players)
+        base_size = num_players // num_tables
+        remainder = num_players % num_tables
+
+        current_idx = 0
+        for i in range(num_tables):
+            # First 'remainder' tables get one extra player
+            size = base_size + (1 if i < remainder else 0)
+            tables.append(players[current_idx : current_idx + size])
+            current_idx += size
 
         # Update table and position assignments in repository
         for i, table_players in enumerate(tables, 1):
