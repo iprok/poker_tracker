@@ -14,6 +14,7 @@ from sqlalchemy.sql import func
 from engine import Session
 from domain.repository.game_repository import GameRepository
 from domain.repository.player_action_repository import PlayerActionRepository
+from domain.repository.tournament_repository import TournamentRepository
 from utils import format_datetime, format_datetime_to_date, get_user_info
 from config import (
     CHIP_VALUE,
@@ -24,12 +25,14 @@ from config import (
     LOG_AMOUNT_LAST_GAMES,
     LOG_AMOUNT_LAST_ACTIONS,
     STATS_BLOCKED_USER_IDS,
+    ADMIN_IDS,
 )
 from decorators import restrict_to_members, restrict_to_members_and_private
 import re
 
 from domain.service.player_statistics_service import PlayerStatisticsService
 from domain.model.player_statistics import PlayerStatistics
+from config import CHANNEL_TOURNAMENT_ID
 
 
 class PlayerActions:
@@ -463,19 +466,39 @@ class PlayerActions:
     @staticmethod
     @restrict_to_members
     async def show_menu(update, context):
-        # Определяем, откуда пришло сообщение
-        if not await PermissionChecker.check_is_chat_private(
+        chat_id = update.effective_chat.id
+
+        # Если это канал турнира, показываем только сводку турнира
+        if str(chat_id) == str(CHANNEL_TOURNAMENT_ID):
+            keyboard = [[KeyboardButton("/summary_tournament")]]
+        elif not await PermissionChecker.check_is_chat_private(
             update, context
-        ):  # Если это группа
+        ):  # Если это обычная группа
             keyboard = [
                 [KeyboardButton("/summary"), KeyboardButton("/summarygames")],
                 [KeyboardButton("/log"), KeyboardButton("/help")],
             ]
         else:  # Если это личный чат с ботом
-            keyboard = [
-                [KeyboardButton("/startgame"), KeyboardButton("/endgame")],
-                [KeyboardButton("/close_menu")],
-            ]
+            is_admin = (
+                update.effective_user.id in ADMIN_IDS
+                if update.effective_user
+                else False
+            )
+
+            keyboard = []
+            keyboard.append([KeyboardButton("/startgame"), KeyboardButton("/endgame")])
+
+            # Отображаем кнопки управления турниром только для администраторов
+            if is_admin:
+                keyboard.append(
+                    [
+                        KeyboardButton("/start_tournament"),
+                        KeyboardButton("/end_tournament"),
+                        KeyboardButton("/shuffle_players"),
+                    ]
+                )
+
+            keyboard.append([KeyboardButton("/close_menu")])
 
         reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
         await MessageSender.send_to_current_channel(

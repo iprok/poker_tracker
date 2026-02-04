@@ -66,6 +66,11 @@ async def get_user_info(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> str
         return None
 
 
+from engine import Session
+from domain.repository.tournament_repository import TournamentRepository
+from telegram import BotCommandScopeAllPrivateChats
+
+
 def ensure_aware(dt: datetime) -> datetime:
     """
     Превращает offset-naive datetime в offset-aware с UTC, если требуется.
@@ -73,3 +78,34 @@ def ensure_aware(dt: datetime) -> datetime:
     if dt.tzinfo is None:
         return dt.replace(tzinfo=timezone.utc)
     return dt
+
+
+async def setup_bot_commands(bot) -> None:
+    """Sets bot commands based on the current state (e.g., active tournament)."""
+    db_session = Session()
+    try:
+        has_active_tournament = (
+            TournamentRepository(db_session).find_active_tournament() is not None
+        )
+
+        commands = [
+            ("buyin", "Закуп"),
+            ("quitgame", "Выйти"),
+            ("menu", "Управление игрой"),
+            ("mystats", "Ваша статистика"),
+        ]
+
+        if has_active_tournament:
+            commands.extend(
+                [
+                    ("join_tournament", "Вступить в турнир"),
+                    ("leave_tournament", "Покинуть турнир"),
+                ]
+            )
+
+        await bot.set_my_commands(
+            commands=commands,
+            scope=BotCommandScopeAllPrivateChats(),
+        )
+    finally:
+        db_session.close()
