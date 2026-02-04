@@ -46,5 +46,3 @@ class Tournament(Base):
         minutes, seconds = divmod(remainder, 60)
         return f"{hours:02}:{minutes:02}:{seconds:02}"
 
-
-Base.metadata.create_all(Engine)

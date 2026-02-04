@@ -19,5 +19,3 @@ class PlayerAction(Base):
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
 
-
-Base.metadata.create_all(Engine)

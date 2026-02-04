@@ -6,3 +6,5 @@ Base = declarative_base()
 Engine = create_engine("sqlite:///poker_bot.db")
 Session = sessionmaker(bind=Engine)
 session = Session()
+
+

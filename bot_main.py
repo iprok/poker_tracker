@@ -9,6 +9,10 @@ from di_container import DIContainer
 from engine import session, Session
 from domain.repository.tournament_repository import TournamentRepository
 from telegram import BotCommandScopeChat, BotCommandScopeAllPrivateChats
+# Initialize database tables
+from db_init import init_db
+
+init_db()
 
 
 async def setup_bot_commands(bot) -> None:

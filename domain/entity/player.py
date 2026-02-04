@@ -21,5 +21,3 @@ class Player(Base):
     def get_name(self) -> str:
         return self.name
 
-
-Base.metadata.create_all(Engine)

@@ -38,5 +38,3 @@ class PlayerTournamentAction(Base):
     def get_player(self) -> Player:
         return self.player
 
-
-Base.metadata.create_all(Engine)
