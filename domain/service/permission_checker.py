@@ -14,7 +14,9 @@ class PermissionChecker:
             user_id = update.effective_user.id
 
             chat_member = await context.bot.get_chat_member(CHANNEL_ID, user_id)
-            chat_tournament_member = await context.bot.get_chat_member(CHANNEL_TOURNAMENT_ID, user_id)
+            chat_tournament_member = await context.bot.get_chat_member(
+                CHANNEL_TOURNAMENT_ID, user_id
+            )
             if chat_member.status in [
                 ChatMemberStatus.MEMBER,
                 ChatMemberStatus.ADMINISTRATOR,

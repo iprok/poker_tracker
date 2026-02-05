@@ -22,9 +22,10 @@ class PlayerRepository(BaseRepository):
                 name=player_data.name,
             )
 
-        # Update fields if changed
-        if player.username != player_data.username or player.name != player_data.name:
+        # Update fields if changed and provided
+        if player_data.username and player.username != player_data.username:
             player.username = player_data.username
+        if player_data.name and player.name != player_data.name:
             player.name = player_data.name
 
         self.save(player)

@@ -13,6 +13,7 @@ from domain.use_cases.Tournament.get_tournament_summary_use_case import (
     GetTournamentSummaryUseCase,
 )
 from domain.use_cases.Tournament.shuffle_players_use_case import ShufflePlayersUseCase
+from domain.use_cases.Tournament.kick_player_use_case import KickPlayerUseCase
 from domain.service.notification_public_channel_service import (
     NotificationPublicChannelService,
 )
@@ -21,7 +22,7 @@ from domain.service.notification_bot_channel_service import (
 )
 from domain.scheme.player_data import PlayerData
 from utils import get_user_info, setup_bot_commands
-from config import CHANNEL_TOURNAMENT_ID
+from config import CHANNEL_TOURNAMENT_ID, ADMIN_IDS
 
 
 class TournamentManagement:
@@ -33,6 +34,7 @@ class TournamentManagement:
         eliminate_player_use_case: EliminatePlayerUseCase,
         get_tournament_summary_use_case: GetTournamentSummaryUseCase,
         shuffle_players_use_case: ShufflePlayersUseCase,
+        kick_player_use_case: KickPlayerUseCase,
         notification_public_tournament_channel_service: NotificationPublicChannelService,
         notification_bot_channel_service: NotificationBotChannelService,
     ) -> None:
@@ -42,6 +44,7 @@ class TournamentManagement:
         self._eliminate_player_use_case = eliminate_player_use_case
         self._get_tournament_summary_use_case = get_tournament_summary_use_case
         self._shuffle_players_use_case = shuffle_players_use_case
+        self._kick_player_use_case = kick_player_use_case
         self._notification_public_tournament_channel_service = (
             notification_public_tournament_channel_service
         )
@@ -55,7 +58,8 @@ class TournamentManagement:
             tables = result["tables"]
 
             message = [
-                f"🎲 <b>Рассадка игроков (Турнир #{result['tournament_id']})</b>\n"
+                f"⏳ <b>Турнир начался! Регистрация закрыта.</b>\n",
+                f"🎲 <b>Рассадка игроков (Турнир #{result['tournament_id']})</b>\n",
             ]
 
             for i, table_players in enumerate(tables, 1):
@@ -91,7 +95,13 @@ class TournamentManagement:
                 )
                 return
 
-            status = "Активный" if summary["is_active"] else "Завершенный"
+            if summary["status"] == "registration_open":
+                status = "Регистрация открыта"
+            elif summary["status"] == "active":
+                status = "Активный"
+            elif summary["status"] == "finished":
+                status = "Завершенный"
+
             message = [f"📊 <b>Турнир #{tournament.id}</b> ({status})\n"]
 
             if not summary["players"]:
@@ -129,15 +139,14 @@ class TournamentManagement:
             tournament = await self._start_tournament_use_case.execute(player_data)
             await self._notification_public_tournament_channel_service.notify(
                 context.bot,
-                f"🏆 Турнир #{tournament.id} начат!\n"
+                f"Регистрация на 🏆 <b>Турнир #{tournament.id}</b> открыта.\n"
                 f"В личном чате с ботом появились кнопки:\n"
                 f"<b>Вступить в турнир</b>\n"
                 f"<b>Покинуть турнир</b>\n",
             )
 
             await self._notification_bot_channel_service.reply(
-                update,
-                f"🏆 Турнир #{tournament.id} начат!\n"
+                update, f"🏆 Турнир #{tournament.id} начат!\n"
             )
 
             # Update dynamic commands
@@ -169,8 +178,7 @@ class TournamentManagement:
             )
 
             await self._notification_bot_channel_service.reply(
-                update,
-                f"🛑 Турнир завершен.\n"
+                update, f"🛑 Турнир завершен.\n"
             )
 
             # Update dynamic commands
@@ -218,11 +226,70 @@ class TournamentManagement:
 
             action = await self._eliminate_player_use_case.execute(player_data)
 
+            if not action:
+                await self._notification_public_tournament_channel_service.notify(
+                    context.bot,
+                    f"Игрок <b>{player_data.name}</b> (@{player_data.username}) отменил свою регистрацию в турнире.",
+                )
+                return
+
             await self._notification_public_tournament_channel_service.notify(
                 context.bot,
                 f"☠️ Игрок <b>{action.get_player().get_name()}</b> (@{action.get_player().get_user_name()}) выбыл из турнира.\n"
                 f"{'🏆 ' if action.rank and 1 <= action.rank <= 3 else '🏅 '}Место: {action.rank}\n"
                 f"⏱️ Время в игре: {action.get_duration_str()}",
+            )
+        except RuntimeError as e:
+            await self._notification_bot_channel_service.reply(
+                update, f"❌ Ошибка: {str(e)}"
+            )
+        except Exception as e:
+            await self._notification_bot_channel_service.reply(
+                update, f"❌ Произошла непредвиденная ошибка: {str(e)}"
+            )
+
+    async def kick_player(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> None:
+        try:
+            if not update.effective_user or update.effective_user.id not in ADMIN_IDS:
+                return
+
+            # Extract telegram_id from the regex match in context.match
+            if not context.match:
+                return
+
+            target_telegram_id = int(context.match.group(1))
+
+            player, action = await self._kick_player_use_case.execute(
+                target_telegram_id
+            )
+
+            if not action:
+                await self._notification_public_tournament_channel_service.notify(
+                    context.bot,
+                    f"🚫 Игрок <b>{player.get_name()}</b> (@{player.get_user_name()}) удален из списка участников администратором.",
+                )
+
+                await self._notification_bot_channel_service.reply(
+                    update,
+                    f"✅ Игрок <b>{player.get_name()}</b> (@{player.get_user_name()}) исключен.",
+                )
+
+                return
+
+            player_name = action.get_player().get_name()
+            player_username = action.get_player().get_user_name()
+
+            await self._notification_public_tournament_channel_service.notify(
+                context.bot,
+                f"☠️ Игрок <b>{player_name}</b> (@{player_username}) выбыл из турнира (администратором).\n"
+                f"{'🏆 ' if action.rank and 1 <= action.rank <= 3 else '🏅 '}Место: {action.rank}\n"
+                f"⏱️ Время в игре: {action.get_duration_str()}",
+            )
+
+            await self._notification_bot_channel_service.reply(
+                update, f"✅ Игрок {player_name} (@{player_username}) исключен."
             )
         except RuntimeError as e:
             await self._notification_bot_channel_service.reply(

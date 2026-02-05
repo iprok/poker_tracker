@@ -28,7 +28,10 @@ class StartTournamentUseCase:
         player = self._player_repository.get_or_create(player_data)
 
         new_tournament = Tournament(
-            start_time=datetime.now(timezone.utc), end_time=None, created_player=player
+            created_at=datetime.now(timezone.utc),
+            start_time=None,
+            end_time=None,
+            created_player=player,
         )
 
         self._tournament_repository.save(new_tournament)

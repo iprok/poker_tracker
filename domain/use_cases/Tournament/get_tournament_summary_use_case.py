@@ -16,14 +16,21 @@ class GetTournamentSummaryUseCase:
 
     async def execute(self) -> Dict[str, Any]:
         tournament = self._tournament_repository.find_active_tournament()
-        is_active = True
 
         if not tournament:
             tournament = self._tournament_repository.find_latest_tournament()
-            is_active = False
+            status = "not_found"
 
         if not tournament:
-            return {"tournament": None, "players": [], "is_active": False}
+            return {"tournament": None, "players": [], "status": status}
+
+        status = "registration_open"
+
+        if tournament.is_tournament_started():
+            status = "active"
+
+        if tournament.is_tournament_ended():
+            status = "finished"
 
         actions = (
             self._player_tournament_action_repository.find_actions_by_tournament_id(
@@ -59,5 +66,5 @@ class GetTournamentSummaryUseCase:
         return {
             "tournament": tournament,
             "players": sorted_players,
-            "is_active": is_active,
+            "status": status,
         }

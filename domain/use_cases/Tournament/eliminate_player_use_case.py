@@ -8,6 +8,7 @@ from domain.repository.player_tournament_action_repository import (
     PlayerTournamentActionRepository,
 )
 from domain.repository.tournament_repository import TournamentRepository
+from typing import Optional
 
 
 class EliminatePlayerUseCase:
@@ -21,7 +22,9 @@ class EliminatePlayerUseCase:
         self._player_repository = player_repository
         self._player_tournament_action_repository = player_tournament_action_repository
 
-    async def execute(self, player_data: PlayerData) -> PlayerTournamentAction:
+    async def execute(
+        self, player_data: PlayerData
+    ) -> Optional[PlayerTournamentAction]:
         active_tournament = self._tournament_repository.find_active_tournament()
         if not active_tournament:
             raise RuntimeError("Нет активного турнира. Нельзя выбыть.")
@@ -35,6 +38,11 @@ class EliminatePlayerUseCase:
 
         if not action:
             raise RuntimeError("Вы не участвуете в этом турнире.")
+
+        if not active_tournament.is_tournament_started():
+            self._player_tournament_action_repository.unregister_player(action)
+
+            return None
 
         if action.rank is not None:
             raise RuntimeError("Вы уже выбыли из этого турнира.")
@@ -52,11 +60,11 @@ class EliminatePlayerUseCase:
 
         # Calculate Duration
         now = datetime.now(timezone.utc)
-        created_at = action.created_at
-        if created_at.tzinfo is None:
-            created_at = created_at.replace(tzinfo=timezone.utc)
+        start_time = active_tournament.start_time
+        if start_time.tzinfo is None:
+            start_time = start_time.replace(tzinfo=timezone.utc)
 
-        duration_seconds = int((now - created_at).total_seconds())
+        duration_seconds = int((now - start_time).total_seconds())
 
         action = self._player_tournament_action_repository.eliminate_player(
             tournament_id=active_tournament.id,

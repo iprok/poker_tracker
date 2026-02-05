@@ -12,3 +12,7 @@ class BaseRepository(ABC):
     def save(self, model):
         self.db.add(model)
         self.db.commit()
+
+    def delete(self, model):
+        self.db.delete(model)
+        self.db.commit()

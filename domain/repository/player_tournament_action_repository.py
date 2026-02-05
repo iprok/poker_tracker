@@ -36,7 +36,11 @@ class PlayerTournamentActionRepository(BaseRepository):
         return action
 
     def update_table_and_position_assignment(
-        self, tournament_id: int, player_id: int, table_number: int, position_number: int
+        self,
+        tournament_id: int,
+        player_id: int,
+        table_number: int,
+        position_number: int,
     ) -> None:
         action = self.find_action(tournament_id, player_id)
         if action:
@@ -79,7 +83,10 @@ class PlayerTournamentActionRepository(BaseRepository):
 
     def get_active_players(self, tournament_id: int) -> List[str]:
         players = self.find_active_player_entities(tournament_id)
-        return [f"<b>{p.get_name()}</b> (@{p.get_user_name()})" for p in players]
+        return [
+            f"<b>{p.get_name()}</b> (@{p.get_user_name()}) /kick_player_{p.get_telegram_id()}"
+            for p in players
+        ]
 
     def find_active_player_entities(self, tournament_id: int) -> List["Player"]:
         from domain.entity.player import Player
@@ -107,3 +114,6 @@ class PlayerTournamentActionRepository(BaseRepository):
             .order_by(PlayerTournamentAction.created_at.asc())
         )
         return list(self.db.scalars(query).all())
+
+    def unregister_player(self, action: PlayerTournamentAction):
+        self.delete(action)
