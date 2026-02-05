@@ -36,11 +36,9 @@ class ShufflePlayersUseCase:
         tournament.make_tournament_started()
         self._tournament_repository.save(tournament)
 
-        # Determine number of tables (max 8 players per table, max 3 tables)
+        # Determine number of tables (max 9 players per table)
         num_players = len(players)
-        num_tables = (num_players + 7) // 8  # Equivalent to ceil(num_players / 8)
-        if num_tables > 3:
-            num_tables = 3
+        num_tables = (num_players + 8) // 9  # Equivalent to ceil(num_players / 9)
 
         # Divide players into tables as evenly as possible
         tables = []
