@@ -61,6 +61,10 @@ class EliminatePlayerUseCase:
         # Calculate Duration
         now = datetime.now(timezone.utc)
         start_time = active_tournament.start_time
+        if not start_time:
+            # Fallback if start_time is missing (should not happen for active tournament)
+            start_time = now
+
         if start_time.tzinfo is None:
             start_time = start_time.replace(tzinfo=timezone.utc)
 
