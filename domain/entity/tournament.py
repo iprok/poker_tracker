@@ -38,13 +38,19 @@ class Tournament(Base):
     )
 
     def get_duration_str(self) -> str:
-        # Calculate duration
-        if self.start_time.tzinfo is None:
-            self.start_time = self.start_time.replace(tzinfo=timezone.utc)
-        if self.end_time.tzinfo is None:
-            self.end_time = self.end_time.replace(tzinfo=timezone.utc)
+        if not self.start_time or not self.end_time:
+            return "00:00:00"
 
-        duration_seconds = int((self.end_time - self.start_time).total_seconds())
+        # Calculate duration
+        start = self.start_time
+        end = self.end_time
+
+        if start.tzinfo is None:
+            start = start.replace(tzinfo=timezone.utc)
+        if end.tzinfo is None:
+            end = end.replace(tzinfo=timezone.utc)
+
+        duration_seconds = int((end - start).total_seconds())
         hours, remainder = divmod(duration_seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
         return f"{hours:02}:{minutes:02}:{seconds:02}"
