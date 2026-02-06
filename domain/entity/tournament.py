@@ -3,9 +3,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import DateTime, ForeignKey
 from datetime import datetime, timezone
 from engine import Base, Engine
-
-if TYPE_CHECKING:
-    from domain.entity.player import Player
+from domain.entity.player import Player
 
 
 class Tournament(Base):

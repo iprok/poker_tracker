@@ -117,3 +117,17 @@ class PlayerTournamentActionRepository(BaseRepository):
 
     def unregister_player(self, action: PlayerTournamentAction):
         self.delete(action)
+
+    def get_winners(self, tournament_id: int) -> List[PlayerTournamentAction]:
+        query = (
+            select(PlayerTournamentAction)
+            .where(
+                and_(
+                    PlayerTournamentAction.tournament_id == tournament_id,
+                    PlayerTournamentAction.rank.is_not(None),
+                    PlayerTournamentAction.rank <= 3,
+                )
+            )
+            .order_by(PlayerTournamentAction.rank.asc())
+        )
+        return list(self.db.scalars(query).all())
