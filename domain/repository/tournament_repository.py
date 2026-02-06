@@ -12,4 +12,4 @@ class TournamentRepository(BaseRepository):
         return self.db.query(Tournament).order_by(Tournament.id.desc()).first()
 
     def get_all_tournaments(self) -> List[Tournament]:
-        return self.db.query(Tournament).order_by(Tournament.start_time.desc()).all()
+        return self.db.query(Tournament).order_by(Tournament.id.desc()).all()
