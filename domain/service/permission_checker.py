@@ -1,10 +1,21 @@
-from config import CHANNEL_ID, CHANNEL_TOURNAMENT_ID
+from config import CHANNEL_ID, CHANNEL_TOURNAMENT_ID, ADMIN_IDS
 from telegram import Update
 from telegram.ext import ContextTypes
 from telegram.constants import ChatMemberStatus
 
 
 class PermissionChecker:
+    @staticmethod
+    async def check_is_admin(update: Update, _: ContextTypes.DEFAULT_TYPE) -> bool:
+        # Если список администраторов не задан — доступ открыт всем
+        if not ADMIN_IDS:
+            return True
+
+        if not update.effective_user:
+            return False
+
+        return update.effective_user.id in ADMIN_IDS
+
     @staticmethod
     async def check_is_group_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not update.effective_user:

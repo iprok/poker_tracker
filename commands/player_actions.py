@@ -29,7 +29,11 @@ from config import (
     LUDOMAN_USER_ID,
     LUDOMAN_NAME,
 )
-from decorators import restrict_to_members, restrict_to_members_and_private
+from decorators import (
+    restrict_to_members,
+    restrict_to_members_and_private,
+    restrict_to_admins,
+)
 import re
 
 from domain.service.player_statistics_service import PlayerStatisticsService
@@ -106,6 +110,7 @@ class PlayerActions:
 
     @staticmethod
     @restrict_to_members_and_private
+    @restrict_to_admins
     async def ludoman(update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
         Добирает недостающие фишки в банк от имени фейкового игрока «Лудоман».
@@ -124,14 +129,6 @@ class PlayerActions:
 
         if not update.effective_user:
             print("ERROR: ludoman: no user information")
-            session.close()
-            return
-
-        # Только администраторы могут добирать фишки от фейкового игрока
-        if ADMIN_IDS and update.effective_user.id not in ADMIN_IDS:
-            await MessageSender.send_to_current_channel(
-                update, context, "Эта команда доступна только администраторам."
-            )
             session.close()
             return
 
