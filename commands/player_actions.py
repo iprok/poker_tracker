@@ -26,6 +26,8 @@ from config import (
     LOG_AMOUNT_LAST_ACTIONS,
     STATS_BLOCKED_USER_IDS,
     ADMIN_IDS,
+    LUDOMAN_USER_ID,
+    LUDOMAN_NAME,
 )
 from decorators import restrict_to_members, restrict_to_members_and_private
 import re
@@ -96,6 +98,107 @@ class PlayerActions:
             context,
             f"<b>{user_info or str(user.id)} (@{update.effective_user.username})</b>: "
             + buyin_text,
+            parse_mode="HTML",
+        )
+
+        if SHOW_SUMMARY_ON_BUYIN:
+            await PlayerActions.summary(update, context)
+
+    @staticmethod
+    @restrict_to_members_and_private
+    async def ludoman(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        Добирает недостающие фишки в банк от имени фейкового игрока «Лудоман».
+        Нужен, когда закупов записано меньше, чем фишек реально на столе,
+        из-за чего последнему игроку не хватает вывода. Пример: /ludoman 1500
+        """
+        session = Session()
+        current_game_id = context.bot_data.get("current_game_id")
+
+        if current_game_id is None:
+            await MessageSender.send_to_current_channel(
+                update, context, "Сначала начните игру командой /startgame."
+            )
+            session.close()
+            return
+
+        if not update.effective_user:
+            print("ERROR: ludoman: no user information")
+            session.close()
+            return
+
+        # Только администраторы могут добирать фишки от фейкового игрока
+        if ADMIN_IDS and update.effective_user.id not in ADMIN_IDS:
+            await MessageSender.send_to_current_channel(
+                update, context, "Эта команда доступна только администраторам."
+            )
+            session.close()
+            return
+
+        # Извлекаем количество фишек из аргумента команды
+        chips = None
+        if update.message and update.message.text:
+            match = re.search(r"/ludoman(?:@\w+)?\s+(\d+)", update.message.text)
+            if match:
+                chips = int(match.group(1))
+
+        if chips is None or chips <= 0:
+            await MessageSender.send_to_current_channel(
+                update,
+                context,
+                "Ошибка: Укажите положительное количество фишек. Пример: /ludoman 1500",
+            )
+            session.close()
+            return
+
+        # Проверяем кратность (как в /quit)
+        step = int(CHIP_COUNT / CHIP_VALUE / 2)
+        if chips % step != 0:
+            await MessageSender.send_to_current_channel(
+                update,
+                context,
+                f"Ошибка: Количество фишек должно быть кратно {int(step)}.",
+            )
+            session.close()
+            return
+
+        amount = (chips / CHIP_COUNT) * CHIP_VALUE
+
+        # Закуп от имени фейкового игрока «Лудоман»
+        action = PlayerAction(
+            game_id=current_game_id,
+            user_id=LUDOMAN_USER_ID,
+            username=LUDOMAN_NAME,
+            action="buyin",
+            chips=chips,
+            amount=amount,
+            timestamp=datetime.now(timezone.utc),
+        )
+        PlayerActionRepository(session).save(action)
+
+        # Суммарный закуп Лудомана в этой игре
+        ludoman_total = (
+            session.query(PlayerAction)
+            .filter_by(game_id=current_game_id, user_id=LUDOMAN_USER_ID, action="buyin")
+            .with_entities(func.sum(PlayerAction.chips), func.sum(PlayerAction.amount))
+            .first()
+        )
+        ludoman_chips = ludoman_total[0] if ludoman_total and ludoman_total[0] else 0
+        ludoman_amount = ludoman_total[1] if ludoman_total and ludoman_total[1] else 0.0
+
+        session.close()
+
+        ludoman_text = (
+            f"🎰 {LUDOMAN_NAME} докупил {chips} фишек ({amount:.2f} {CURRENCY}) в банк.\n"
+            f"Всего от Лудомана в этой игре: {ludoman_chips} фишек ({ludoman_amount:.2f} {CURRENCY})."
+        )
+
+        await MessageSender.send_to_current_channel(update, context, ludoman_text)
+
+        await MessageSender.send_to_channel(
+            update,
+            context,
+            f"<b>{LUDOMAN_NAME}</b>: " + ludoman_text,
             parse_mode="HTML",
         )
 
@@ -363,6 +466,7 @@ class PlayerActions:
                 "/quit <фишки> - Выйти из игры, указав количество оставшихся фишек.\n"
                 "/startgame - Начать новую игру.\n\n"
                 "/buyin - Закупить фишки.\n\n"
+                "/ludoman <фишки> - Добрать недостающие фишки в банк от имени фейкового игрока.\n\n"
                 "/endgame - Завершить текущую игру.\n"
                 "/stats - Показать персональную статистику.\n"
             )
@@ -385,8 +489,12 @@ class PlayerActions:
 
         # Собираем статистику по игрокам
         for action in actions:
-            user_info = await get_user_info(action.user_id, context) or str(
-                action.user_id
+            # Сначала пробуем актуальное имя из Telegram, затем сохранённое в БД
+            # (нужно для фейковых игроков вроде Лудомана, которых нет в Telegram)
+            user_info = (
+                await get_user_info(action.user_id, context)
+                or action.username
+                or str(action.user_id)
             )
 
             if user_info not in player_stats:
