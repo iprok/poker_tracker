@@ -124,6 +124,11 @@ async def post_init(application: Application) -> None:
         MessageHandler(filters.Regex(rf"^\s*/buyin(@{bn})?$"), PlayerActions.buyin)
     )
     application.add_handler(
+        MessageHandler(
+            filters.Regex(rf"^\s*/ludoman(@{bn})?\s+\d+\s*$"), PlayerActions.ludoman
+        )
+    )
+    application.add_handler(
         MessageHandler(filters.Regex(rf"^\s*/summary(@{bn})?$"), PlayerActions.summary)
     )
     application.add_handler(

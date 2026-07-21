@@ -34,3 +34,19 @@ def restrict_to_members_and_private(func):
         return
 
     return wrapper
+
+
+# Декоратор для ограничения команд только администраторами
+def restrict_to_admins(func):
+    async def wrapper(update: Update, context):
+        if await PermissionChecker.check_is_admin(update, context):
+            await func(update, context)
+            return
+
+        if update.message:
+            await update.message.reply_text(
+                "Эта команда доступна только администраторам."
+            )
+        return
+
+    return wrapper
