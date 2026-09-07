@@ -41,13 +41,23 @@ from domain.model.player_statistics import PlayerStatistics
 from config import CHANNEL_TOURNAMENT_ID
 
 
+def get_current_game_id(session, context):
+    """Restore the active game from persistent storage, including after restart."""
+    game = GameRepository(session).find_active_game()
+    if game is None:
+        context.bot_data.pop("current_game_id", None)
+        return None
+    context.bot_data["current_game_id"] = game.id
+    return game.id
+
+
 class PlayerActions:
 
     @staticmethod
     @restrict_to_members_and_private
     async def buyin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
-        current_game_id = context.bot_data.get("current_game_id")
+        current_game_id = get_current_game_id(session, context)
 
         if current_game_id is None:
             await MessageSender.send_to_current_channel(
@@ -118,7 +128,7 @@ class PlayerActions:
         из-за чего последнему игроку не хватает вывода. Пример: /ludoman 1500
         """
         session = Session()
-        current_game_id = context.bot_data.get("current_game_id")
+        current_game_id = get_current_game_id(session, context)
 
         if current_game_id is None:
             await MessageSender.send_to_current_channel(
@@ -206,7 +216,7 @@ class PlayerActions:
     @restrict_to_members_and_private
     async def quit(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
-        current_game_id = context.bot_data.get("current_game_id")
+        current_game_id = get_current_game_id(session, context)
 
         if current_game_id is None:
             await MessageSender.send_to_current_channel(
@@ -228,6 +238,24 @@ class PlayerActions:
 
         if not update.effective_user:
             print("ERROR: quit: no user information")
+            session.close()
+            return
+
+        has_buyin = (
+            session.query(PlayerAction.id)
+            .filter_by(
+                game_id=current_game_id,
+                user_id=update.effective_user.id,
+                action="buyin",
+            )
+            .first()
+            is not None
+        )
+        if not has_buyin:
+            session.close()
+            await MessageSender.send_to_current_channel(
+                update, context, "Нельзя выйти: у вас нет закупов в текущей игре."
+            )
             return
 
         # Проверяем кратность
@@ -409,7 +437,7 @@ class PlayerActions:
     @restrict_to_members
     async def summary(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session = Session()
-        current_game_id = context.bot_data.get("current_game_id")
+        current_game_id = get_current_game_id(session, context)
         if current_game_id is None:
             await MessageSender.send_to_current_channel(
                 update, context, "Игра не начата."

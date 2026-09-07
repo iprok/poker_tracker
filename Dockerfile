@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 # Установка зависимостей для nodejs, pyright и pip
 RUN apt-get update && \

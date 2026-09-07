@@ -128,8 +128,10 @@ class GameManagement:
     async def handle_confirmation(update, context):
         if "pending_endgame" in context.user_data:
             if "Да, завершить игру" in update.message.text:
+                context.user_data.pop("pending_endgame", None)
                 await GameManagement.end_game(update, context)
             elif "Нет, продолжить играть" in update.message.text:
+                context.user_data.pop("pending_endgame", None)
                 await MessageSender.send_to_current_channel(
                     update,
                     context,
