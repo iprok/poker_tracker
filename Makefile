@@ -16,3 +16,8 @@ linter:
 webserver:
 	@echo "Running uvicorn..."
 	uvicorn asgi:app --host 0.0.0.0 --port 8000
+
+PYTHON ?= python3
+.PHONY: test
+test: ## Run isolated Telegram cash-game tests
+	$(PYTHON) -m unittest discover -s tests -v
