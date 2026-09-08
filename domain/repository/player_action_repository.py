@@ -12,6 +12,35 @@ class PlayerActionRepository(BaseRepository):
         super().__init__(db)
         self.model = PlayerAction
 
+    def add_buyin(
+        self,
+        game_id: int,
+        user_id: int,
+        username: str | None,
+        chips: int,
+        amount: float,
+    ) -> None:
+        """Flush a buy-in; the caller owns commit and rollback."""
+        self.db.add(
+            PlayerAction(
+                game_id=game_id,
+                user_id=user_id,
+                username=username,
+                action="buyin",
+                chips=chips,
+                amount=amount,
+            )
+        )
+        self.db.flush()
+
+    def get_game_buyin_totals(self, game_id: int, user_id: int) -> tuple[int, float]:
+        count, total = (
+            self.db.query(func.count(PlayerAction.id), func.sum(PlayerAction.amount))
+            .filter_by(game_id=game_id, user_id=user_id, action="buyin")
+            .one()
+        )
+        return count, total or 0.0
+
     def find_actions_by_game(self, game_id) -> List[PlayerAction]:
         return (
             self.db.query(PlayerAction)

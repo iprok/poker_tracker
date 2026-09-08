@@ -286,6 +286,68 @@ class CashGameTests(unittest.IsolatedAsyncioTestCase):
         self.assertIs(application.post_init, post_init)
         self.assertEqual(application.bot.token, "123456:TEST_ONLY")
 
+    def execute_buyin(self, user_id=101):
+        from domain.repository.game_repository import GameRepository
+        from domain.repository.player_action_repository import PlayerActionRepository
+        from domain.use_cases.Cash.buyin_use_case import BuyinUseCase
+
+        with engine.Session.begin() as session:
+            return BuyinUseCase(
+                GameRepository(session), PlayerActionRepository(session), 3000, 1
+            ).execute(user_id, "Player")
+
+    def create_game(self):
+        with engine.Session.begin() as session:
+            game = Game()
+            session.add(game)
+            session.flush()
+            return game.id
+
+    def test_buyin_scenario_rejects_missing_active_game(self):
+        from domain.use_cases.Cash.buyin_use_case import NoActiveGameError
+
+        with self.assertRaises(NoActiveGameError):
+            self.execute_buyin()
+        self.assertEqual(self.actions("buyin"), [])
+
+    def test_buyin_scenario_first_and_repeat(self):
+        game_id = self.create_game()
+        first = self.execute_buyin()
+        second = self.execute_buyin()
+        self.assertEqual((first.game_id, first.chips, first.amount), (game_id, 3000, 1))
+        self.assertEqual((first.buyin_count, first.buyin_total), (1, 1))
+        self.assertEqual((second.buyin_count, second.buyin_total), (2, 2))
+        self.assertEqual(len(self.actions("buyin")), 2)
+
+    def test_buyin_scenario_totals_are_scoped_to_player_and_game(self):
+        from datetime import datetime, timezone
+
+        game_id = self.create_game()
+        self.execute_buyin(101)
+        self.execute_buyin(101)
+        other = self.execute_buyin(102)
+        self.assertEqual((other.buyin_count, other.buyin_total), (1, 1))
+        with engine.Session.begin() as session:
+            session.get(Game, game_id).end_time = datetime.now(timezone.utc)
+        next_id = self.create_game()
+        result = self.execute_buyin(101)
+        self.assertEqual(
+            (result.game_id, result.buyin_count, result.buyin_total), (next_id, 1, 1)
+        )
+
+    def test_buyin_scenario_rolls_back_if_totals_fail(self):
+        from domain.repository.player_action_repository import PlayerActionRepository
+
+        self.create_game()
+        with patch.object(
+            PlayerActionRepository,
+            "get_game_buyin_totals",
+            side_effect=RuntimeError("Database failure"),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "Database failure"):
+                self.execute_buyin()
+        self.assertEqual(self.actions("buyin"), [])
+
 
 class PollingStartupTests(unittest.TestCase):
     def test_polling_creates_event_loop_on_python314(self):

@@ -1,3 +1,4 @@
+from domain.use_cases.Cash.buyin_use_case import BuyinUseCase, NoActiveGameError
 from datetime import datetime, timezone
 from domain.entity.game import Game
 from domain.entity.player_action import PlayerAction
@@ -56,53 +57,29 @@ class PlayerActions:
     @staticmethod
     @restrict_to_members_and_private
     async def buyin(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        session = Session()
-        current_game_id = get_current_game_id(session, context)
-
-        if current_game_id is None:
+        if not update.effective_user:
+            return
+        user = update.effective_user
+        user_info = await get_user_info(user.id, context)
+        try:
+            with Session.begin() as session:
+                result = BuyinUseCase(
+                    GameRepository(session),
+                    PlayerActionRepository(session),
+                    CHIP_COUNT,
+                    CHIP_VALUE,
+                ).execute(user.id, user_info)
+        except NoActiveGameError:
+            context.bot_data.pop("current_game_id", None)
             await MessageSender.send_to_current_channel(
                 update, context, "Сначала начните игру командой /startgame."
             )
-
-            session.close()
             return
 
-        if not update.effective_user:
-            print("ERROR: buyin: no user information")
-            return
-
-        user = update.effective_user
-
-        user_info = await get_user_info(user.id, context)
-
-        # Добавляем закуп
-        action = PlayerAction(
-            game_id=current_game_id,
-            user_id=user.id,
-            username=user_info,
-            action="buyin",
-            chips=CHIP_COUNT,
-            amount=CHIP_VALUE,
-            timestamp=datetime.now(timezone.utc),
-        )
-        PlayerActionRepository(session).save(action)
-
-        # Подсчитываем общее количество закупов и сумму
-        total_buyins = (
-            session.query(PlayerAction)
-            .filter_by(game_id=current_game_id, user_id=user.id, action="buyin")
-            .with_entities(func.count(PlayerAction.id), func.sum(PlayerAction.amount))
-            .first()
-        )
-
-        buyin_count = total_buyins[0] if total_buyins else 0
-        buyin_total = total_buyins[1] if total_buyins else 0.0
-
-        session.close()
-
+        context.bot_data["current_game_id"] = result.game_id
         buyin_text = (
-            f"Закуп на {CHIP_COUNT} фишек ({CHIP_VALUE} {CURRENCY}) записан.\n"
-            f"Вы уже закупились {buyin_count} раз(а) на общую сумму {buyin_total:.2f} {CURRENCY} в этой игре."
+            f"Закуп на {result.chips} фишек ({result.amount} {CURRENCY}) записан.\n"
+            f"Вы уже закупились {result.buyin_count} раз(а) на общую сумму {result.buyin_total:.2f} {CURRENCY} в этой игре."
         )
 
         await MessageSender.send_to_current_channel(update, context, buyin_text)

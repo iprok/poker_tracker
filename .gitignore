@@ -49,3 +49,5 @@ config.json
 config.js
 
 files.txt
+
+poker_bot.db.dev
