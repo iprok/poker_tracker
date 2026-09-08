@@ -286,6 +286,52 @@ class CashGameTests(unittest.IsolatedAsyncioTestCase):
         self.assertIs(application.post_init, post_init)
         self.assertEqual(application.bot.token, "123456:TEST_ONLY")
 
+    async def format_test_summary(self, actions):
+        from datetime import datetime, timezone
+
+        game = Game(start_time=datetime.now(timezone.utc))
+        return await PlayerActions.summary_formatter(actions, game, self.context)
+
+    async def test_summary_keeps_namesakes_in_separate_balance_groups(self):
+        self.context.bot.get_chat.side_effect = lambda user_id: SimpleNamespace(
+            first_name="Alex",
+            last_name=None,
+            username="alice" if user_id == 101 else None,
+        )
+        actions = [
+            PlayerAction(user_id=101, username="Alex", action="buyin", amount=1),
+            PlayerAction(user_id=102, username="Alex", action="buyin", amount=1),
+            PlayerAction(user_id=102, username="Alex", action="quit", amount=2),
+        ]
+        summary = await self.format_test_summary(actions)
+        debtors, creditors = summary.split("💰 <b>Банк должен:</b>")
+        self.assertIn("Alex (@alice): 1.00 EUR", debtors)
+        self.assertIn("Alex (ID 102): 1.00 EUR", creditors)
+        self.assertIn("денег в банке:</b> 0.00 EUR", summary)
+
+    async def test_summary_combines_renamed_player_when_telegram_unavailable(self):
+        self.context.bot.get_chat.side_effect = RuntimeError("Unavailable")
+        actions = [
+            PlayerAction(user_id=101, username="Old name", action="buyin", amount=1),
+            PlayerAction(user_id=101, username="New name", action="quit", amount=1),
+        ]
+        summary = await self.format_test_summary(actions)
+        self.assertIn("Обрели гармонию", summary)
+        self.assertIn("Old name: 0.00 EUR", summary)
+        self.assertNotIn("Должны банку", summary)
+        self.assertNotIn("Банк должен:", summary)
+        self.context.bot.get_chat.assert_awaited_once_with(101)
+
+    async def test_summary_uses_ids_for_unavailable_namesakes(self):
+        self.context.bot.get_chat.side_effect = RuntimeError("Unavailable")
+        actions = [
+            PlayerAction(user_id=user_id, username="Alex", action="buyin", amount=1)
+            for user_id in (101, 102)
+        ]
+        summary = await self.format_test_summary(actions)
+        self.assertIn("Alex (ID 101): 1.00 EUR", summary)
+        self.assertIn("Alex (ID 102): 1.00 EUR", summary)
+
     def execute_buyin(self, user_id=101):
         from domain.repository.game_repository import GameRepository
         from domain.repository.player_action_repository import PlayerActionRepository

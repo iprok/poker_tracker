@@ -1,3 +1,5 @@
+from collections import Counter
+from html import escape
 from domain.use_cases.Cash.buyin_use_case import BuyinUseCase, NoActiveGameError
 from datetime import datetime, timezone
 from domain.entity.game import Game
@@ -489,34 +491,46 @@ class PlayerActions:
         total_buyin = 0
         total_quit = 0
 
-        # Собираем статистику по игрокам
+        # Telegram ID is the identity; names are presentation only.
         for action in actions:
-            # Сначала пробуем актуальное имя из Telegram, затем сохранённое в БД
-            # (нужно для фейковых игроков вроде Лудомана, которых нет в Telegram)
-            user_info = (
-                await get_user_info(action.user_id, context)
-                or action.username
-                or str(action.user_id)
-            )
-
-            if user_info not in player_stats:
-                player_stats[user_info] = {"buyin": 0, "quit": 0}
-
+            if action.user_id not in player_stats:
+                player_stats[action.user_id] = {
+                    "buyin": 0,
+                    "quit": 0,
+                    "saved_name": action.username,
+                }
+            stats = player_stats[action.user_id]
+            if not stats["saved_name"] and action.username:
+                stats["saved_name"] = action.username
             if action.action == "buyin":
-                player_stats[user_info]["buyin"] += action.amount
+                stats["buyin"] += action.amount
                 total_buyin += action.amount
-
             elif action.action == "quit":
-                player_stats[user_info]["quit"] += action.amount
+                stats["quit"] += action.amount
                 total_quit += action.amount
 
-        # Рассчитываем баланс для каждого игрока
+        names = {}
+        for user_id, stats in player_stats.items():
+            names[user_id] = (
+                await get_user_info(user_id, context)
+                or stats["saved_name"]
+                or str(user_id)
+            )
+        name_counts = Counter(names.values())
+
         players_with_balance = []
-        for username, stats in player_stats.items():
+        for user_id, stats in player_stats.items():
+            name = names[user_id]
+            if name_counts[name] > 1:
+                try:
+                    chat = await context.bot.get_chat(user_id)
+                    username = chat.username
+                except Exception:
+                    username = None
+                identifier = f"@{escape(username)}" if username else f"ID {user_id}"
+                name = f"{name} ({identifier})"
             balance = stats["quit"] - stats["buyin"]
-            players_with_balance.append(
-                (username, balance, abs(balance))
-            )  # (имя, баланс, |баланс|)
+            players_with_balance.append((name, balance, abs(balance)))
 
         # Сортируем игроков по абсолютному значению баланса (от большего к меньшему)
         players_with_balance.sort(key=lambda x: x[2], reverse=True)
