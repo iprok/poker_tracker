@@ -362,6 +362,32 @@ class CashGameTests(unittest.IsolatedAsyncioTestCase):
                 )
             return game.id
 
+    def test_zero_bank_warns_immediately_and_closes_after_two_minutes(self):
+        self.timed_game()
+        self.assertIn("2 минуты", self.timeout_check(0)[1][0])
+        self.assertFalse(self.timeout_check(1)[2])
+        self.assertTrue(self.timeout_check(2)[2])
+        self.assertEqual(len(self.actions("end_game")), 1)
+        self.assertEqual(self.timeout_check(3)[1], [])
+
+    def test_zero_bank_bypasses_saved_check_after_last_exit(self):
+        game_id = self.timed_game(2)
+        self.assertEqual(self.timeout_check(0)[1], [])
+        with engine.Session.begin() as session:
+            session.add(PlayerAction(
+                game_id=game_id, user_id=101, action="quit", amount=2, chips=6000
+            ))
+        self.assertIn("2 минуты", self.timeout_check(1)[1][0])
+        self.assertFalse(self.timeout_check(2)[2])
+        self.assertTrue(self.timeout_check(3)[2])
+
+    def test_zero_bank_buyin_prevents_closure(self):
+        self.timed_game()
+        self.timeout_check(0)
+        self.execute_buyin()
+        self.assertFalse(self.timeout_check(2)[2])
+        self.assertEqual(self.actions("end_game"), [])
+
     def test_timeout_warns_then_closes_low_bank(self):
         self.timed_game(1)
         self.assertEqual(self.timeout_check(29)[1], [])

@@ -1,5 +1,6 @@
 """Persistent cash-game timeout checks. The caller owns the transaction."""
 
+import logging
 from datetime import datetime, timedelta
 from sqlalchemy import case, func
 from domain.entity.game_timeout import GameTimeout
@@ -8,12 +9,15 @@ from domain.repository.game_repository import GameRepository
 from utils import ensure_aware
 
 INTERVAL = timedelta(minutes=30)
+ZERO_BANK_GRACE = timedelta(minutes=2)
+logger = logging.getLogger(__name__)
 MAX_DURATION = timedelta(hours=12)
 
 
 def check_game_timeout(session, now: datetime, announce_duration: bool = False):
     game = GameRepository(session).find_active_game()
     if game is None:
+        logger.info("Timeout check: no active game")
         return None, [], False
     state = session.get(GameTimeout, game.id)
     if state is None:
@@ -23,9 +27,6 @@ def check_game_timeout(session, now: datetime, announce_duration: bool = False):
             buyin_id=0,
         )
         session.add(state)
-    if now < ensure_aware(state.next_check):
-        return game.id, [], False
-
     balance = (
         session.query(
             func.sum(
@@ -40,6 +41,16 @@ def check_game_timeout(session, now: datetime, announce_duration: bool = False):
         .scalar()
         or 0
     )
+    zero_bank = balance == 0
+    due = now >= ensure_aware(state.next_check)
+    logger.info(
+        "Timeout check: game=%s bank=%s now=%s next_check=%s deadline=%s",
+        game.id, balance, now, state.next_check, state.deadline,
+    )
+    # Empty-bank test mode must also bypass persisted 30-minute schedules.
+    if not due and not zero_bank:
+        return game.id, [], False
+
     latest_buyin = (
         session.query(func.max(PlayerAction.id))
         .filter_by(game_id=game.id, action="buyin")
@@ -50,16 +61,18 @@ def check_game_timeout(session, now: datetime, announce_duration: bool = False):
     overdue = duration > MAX_DURATION
     low_bank = balance < 2
     messages = []
-    if announce_duration:
+    if announce_duration and due:
         minutes = int(duration.total_seconds() // 60)
         messages.append(f"⏱ Игра идёт {minutes // 60} ч {minutes % 60} мин.")
 
     state.next_check = now + INTERVAL
     if state.deadline is not None:
         if latest_buyin > state.buyin_id:
+            logger.info("Timeout cancelled by buy-in: game=%s buyin=%s", game.id, latest_buyin)
             state.deadline = None
             messages.append("Закуп получен: автоматическое завершение отменено.")
         elif now >= ensure_aware(state.deadline):
+            logger.info("Timeout closing game=%s", game.id)
             game.end_time = now
             session.add(
                 PlayerAction(
@@ -83,9 +96,14 @@ def check_game_timeout(session, now: datetime, announce_duration: bool = False):
         reason = (
             "игра длится больше 12 часов" if overdue else "баланс банка меньше 2 евро"
         )
+        grace = ZERO_BANK_GRACE if zero_bank else INTERVAL
+        minutes = int(grace.total_seconds() // 60)
+        delay_text = "2 минуты" if zero_bank else f"{minutes} минут"
         messages.append(
-            f"⚠️ {reason.capitalize()}. Игра завершится через 30 минут, если не будет закупов."
+            f"⚠️ {reason.capitalize()}. Игра завершится через {delay_text}, если не будет закупов."
         )
-        state.deadline = now + INTERVAL
+        state.deadline = now + grace
+        state.next_check = min(state.next_check, state.deadline)
+        logger.info("Timeout warning: game=%s reason=%s deadline=%s", game.id, reason, state.deadline)
         state.buyin_id = latest_buyin
     return game.id, messages, False

@@ -19,8 +19,11 @@ async def check_timeouts(application):
         application.bot_data.pop("current_game_id", None)
     try:
         for message in messages:
+            logger.info("Sending timeout notification: game=%s channel=%s text=%s", game_id, CHANNEL_ID, message)
             await application.bot.send_message(CHANNEL_ID, message)
+            logger.info("Timeout notification delivered: game=%s", game_id)
     except Exception:
+        logger.exception("Timeout notification failed: game=%s ended=%s", game_id, ended)
         # Never close a game on a warning that Telegram did not receive.
         if not ended and game_id is not None:
             with Session.begin() as session:
@@ -32,6 +35,7 @@ async def check_timeouts(application):
 
 
 async def timeout_loop(application):
+    logger.info("Cash-game timeout loop started: poll=60s zero_bank_grace=2min")
     while True:
         try:
             await check_timeouts(application)
@@ -43,6 +47,7 @@ async def timeout_loop(application):
 async def stop_timeout_loop(application):
     task = application.bot_data.pop("game_timeout_task", None)
     if task:
+        logger.info("Stopping cash-game timeout loop")
         task.cancel()
         try:
             await task

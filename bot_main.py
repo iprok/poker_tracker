@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from commands.game_timeout import timeout_loop, stop_timeout_loop
 from telegram.ext import Application, MessageHandler, filters
 from telegram import BotCommandScopeChat, BotCommandScopeAllPrivateChats
@@ -206,6 +207,11 @@ def build_application() -> Application:
 
 
 def run_bot():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     app = build_application()
     app.run_polling()
 
