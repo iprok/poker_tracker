@@ -65,12 +65,15 @@ def check_game_timeout(session, now: datetime, announce_duration: bool = False):
         minutes = int(duration.total_seconds() // 60)
         messages.append(f"⏱ Игра идёт {minutes // 60} ч {minutes % 60} мин.")
 
+    renewed = False
     state.next_check = now + INTERVAL
     if state.deadline is not None:
         if latest_buyin > state.buyin_id:
-            logger.info("Timeout cancelled by buy-in: game=%s buyin=%s", game.id, latest_buyin)
+            renewed = True
             state.deadline = None
-            messages.append("Закуп получен: автоматическое завершение отменено.")
+            if not (overdue or low_bank):
+                logger.info("Timeout cancelled by buy-in: game=%s buyin=%s", game.id, latest_buyin)
+                messages.append("Банк пополнен. Автоматическое завершение отменено.")
         elif now >= ensure_aware(state.deadline):
             logger.info("Timeout closing game=%s", game.id)
             game.end_time = now
@@ -99,9 +102,16 @@ def check_game_timeout(session, now: datetime, announce_duration: bool = False):
         grace = ZERO_BANK_GRACE if zero_bank else INTERVAL
         minutes = int(grace.total_seconds() // 60)
         delay_text = "2 минуты" if zero_bank else f"{minutes} минут"
-        messages.append(
-            f"⚠️ {reason.capitalize()}. Игра завершится через {delay_text}, если не будет закупов."
-        )
+        if renewed:
+            remaining_reason = "банк снова пуст" if zero_bank and not overdue else reason
+            messages.append(
+                f"⚠️ После предупреждения был закуп, но {remaining_reason}. "
+                f"Автозавершение отложено на {delay_text}, если не будет новых закупов."
+            )
+        else:
+            messages.append(
+                f"⚠️ {reason.capitalize()}. Игра завершится через {delay_text}, если не будет закупов."
+            )
         state.deadline = now + grace
         state.next_check = min(state.next_check, state.deadline)
         logger.info("Timeout warning: game=%s reason=%s deadline=%s", game.id, reason, state.deadline)

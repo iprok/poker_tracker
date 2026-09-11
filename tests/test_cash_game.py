@@ -388,6 +388,23 @@ class CashGameTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(self.timeout_check(2)[2])
         self.assertEqual(self.actions("end_game"), [])
 
+    def test_zero_bank_buyin_then_full_exit_sends_one_extension(self):
+        game_id = self.timed_game()
+        self.timeout_check(0)
+        self.execute_buyin()
+        with engine.Session.begin() as session:
+            session.add(PlayerAction(
+                game_id=game_id, user_id=101, action="quit", amount=1, chips=3000
+            ))
+        _, messages, ended = self.timeout_check(1)
+        self.assertFalse(ended)
+        self.assertEqual(messages, [
+            "⚠️ После предупреждения был закуп, но банк снова пуст. "
+            "Автозавершение отложено на 2 минуты, если не будет новых закупов."
+        ])
+        self.assertFalse(self.timeout_check(2)[2])
+        self.assertTrue(self.timeout_check(3)[2])
+
     def test_timeout_warns_then_closes_low_bank(self):
         self.timed_game(1)
         self.assertEqual(self.timeout_check(29)[1], [])
@@ -401,7 +418,9 @@ class CashGameTests(unittest.IsolatedAsyncioTestCase):
         self.timed_game(1)
         self.timeout_check(30)
         self.execute_buyin()
-        self.assertFalse(self.timeout_check(60)[2])
+        _, messages, ended = self.timeout_check(60)
+        self.assertFalse(ended)
+        self.assertEqual(messages, ["Банк пополнен. Автоматическое завершение отменено."])
         self.assertFalse(self.timeout_check(90)[2])
         self.assertEqual(self.actions("end_game"), [])
 
@@ -410,7 +429,11 @@ class CashGameTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.timeout_check(720)[1], [])
         self.assertIn("12 часов", self.timeout_check(750)[1][0])
         self.execute_buyin()
-        self.assertFalse(self.timeout_check(780)[2])
+        _, messages, ended = self.timeout_check(780)
+        self.assertFalse(ended)
+        self.assertEqual(len(messages), 1)
+        self.assertIn("игра длится больше 12 часов", messages[0])
+        self.assertIn("отложено на 30 минут", messages[0])
         self.execute_buyin()
         self.assertFalse(self.timeout_check(810)[2])
         self.assertTrue(self.timeout_check(840)[2])
