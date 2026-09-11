@@ -16,6 +16,9 @@ from domain.entity.tournament import Tournament
 from domain.entity.player_tournament_action import PlayerTournamentAction
 
 
+from domain.entity.game_timeout import GameTimeout
+
+
 def init_db():
     """Initialize database by creating all tables."""
     Base.metadata.create_all(Engine)

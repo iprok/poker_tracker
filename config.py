@@ -20,3 +20,5 @@ ADMIN_IDS = config.get("admin_ids", [])
 # Фейковый игрок для добора недостающих фишек в банк (команда /ludoman)
 LUDOMAN_USER_ID = config.get("ludoman_user_id", 999999999)
 LUDOMAN_NAME = config.get("ludoman_name", "Ludoman")
+
+ANNOUNCE_GAME_DURATION = config.get("announce_game_duration", False)

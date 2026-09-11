@@ -332,6 +332,122 @@ class CashGameTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Alex (ID 101): 1.00 EUR", summary)
         self.assertIn("Alex (ID 102): 1.00 EUR", summary)
 
+    def timeout_check(self, minutes, announce=False):
+        from datetime import datetime, timedelta, timezone
+        from domain.service.game_timeout_service import check_game_timeout
+
+        with engine.Session.begin() as session:
+            return check_game_timeout(
+                session,
+                datetime(2026, 1, 1, tzinfo=timezone.utc) + timedelta(minutes=minutes),
+                announce,
+            )
+
+    def timed_game(self, amount=0):
+        from datetime import datetime, timezone
+
+        with engine.Session.begin() as session:
+            game = Game(start_time=datetime(2026, 1, 1, tzinfo=timezone.utc))
+            session.add(game)
+            session.flush()
+            if amount:
+                session.add(
+                    PlayerAction(
+                        game_id=game.id,
+                        user_id=101,
+                        action="buyin",
+                        amount=amount,
+                        chips=3000,
+                    )
+                )
+            return game.id
+
+    def test_timeout_warns_then_closes_low_bank(self):
+        self.timed_game(1)
+        self.assertEqual(self.timeout_check(29)[1], [])
+        self.assertIn("меньше 2 евро", self.timeout_check(30)[1][0])
+        self.assertFalse(self.timeout_check(59)[2])
+        self.assertTrue(self.timeout_check(60)[2])
+        self.assertEqual(len(self.actions("end_game")), 1)
+        self.assertEqual(self.timeout_check(90)[1], [])
+
+    def test_timeout_buyin_cancels_low_bank_closure(self):
+        self.timed_game(1)
+        self.timeout_check(30)
+        self.execute_buyin()
+        self.assertFalse(self.timeout_check(60)[2])
+        self.assertFalse(self.timeout_check(90)[2])
+        self.assertEqual(self.actions("end_game"), [])
+
+    def test_timeout_duration_threshold_and_repeated_extensions(self):
+        self.timed_game(10)
+        self.assertEqual(self.timeout_check(720)[1], [])
+        self.assertIn("12 часов", self.timeout_check(750)[1][0])
+        self.execute_buyin()
+        self.assertFalse(self.timeout_check(780)[2])
+        self.execute_buyin()
+        self.assertFalse(self.timeout_check(810)[2])
+        self.assertTrue(self.timeout_check(840)[2])
+
+    def test_timeout_notifications_are_optional_and_two_euros_is_safe(self):
+        self.timed_game(2)
+        self.assertEqual(self.timeout_check(30)[1], [])
+        self.assertIn("1 ч 0 мин", self.timeout_check(60, True)[1][0])
+        self.assertEqual(self.actions("end_game"), [])
+
+    def test_timeout_buyin_then_exit_still_extends(self):
+        game_id = self.timed_game(1)
+        self.timeout_check(30)
+        self.execute_buyin()
+        with engine.Session.begin() as session:
+            session.add(
+                PlayerAction(
+                    game_id=game_id, user_id=101, action="quit", amount=1, chips=3000
+                )
+            )
+        self.assertFalse(self.timeout_check(60)[2])
+        self.assertTrue(self.timeout_check(90)[2])
+
+    def test_timeout_ignores_manually_finished_game(self):
+        from datetime import datetime, timezone
+
+        game_id = self.timed_game(1)
+        self.timeout_check(30)
+        with engine.Session.begin() as session:
+            session.get(Game, game_id).end_time = datetime.now(timezone.utc)
+        self.assertEqual(self.timeout_check(60)[1], [])
+        self.assertEqual(self.actions("end_game"), [])
+
+    async def test_timeout_failed_warning_is_retried_before_closing(self):
+        from commands.game_timeout import check_timeouts
+        from domain.entity.game_timeout import GameTimeout
+
+        game_id = self.timed_game(1)
+        self.context.bot.send_message.side_effect = RuntimeError("Telegram unavailable")
+        with self.assertRaisesRegex(RuntimeError, "Telegram unavailable"):
+            await check_timeouts(self.context)
+        with engine.Session() as session:
+            self.assertIsNone(session.get(GameTimeout, game_id).deadline)
+            self.assertIsNone(session.get(Game, game_id).end_time)
+        self.context.bot.send_message.side_effect = None
+        await check_timeouts(self.context)
+        with engine.Session() as session:
+            self.assertIsNotNone(session.get(GameTimeout, game_id).deadline)
+            self.assertIsNone(session.get(Game, game_id).end_time)
+
+    async def test_timeout_completion_clears_context_after_restart(self):
+        from commands.game_timeout import check_timeouts
+
+        game_id = self.timed_game(1)
+        self.timeout_check(30)
+        self.context.bot_data["current_game_id"] = game_id
+        await check_timeouts(self.context)
+        self.assertNotIn("current_game_id", self.context.bot_data)
+        self.assertEqual(len(self.actions("end_game")), 1)
+        self.assertIn(
+            "автоматически завершена", self.context.bot.send_message.await_args.args[1]
+        )
+
     def execute_buyin(self, user_id=101):
         from domain.repository.game_repository import GameRepository
         from domain.repository.player_action_repository import PlayerActionRepository

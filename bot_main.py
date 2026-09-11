@@ -1,4 +1,5 @@
 import asyncio
+from commands.game_timeout import timeout_loop, stop_timeout_loop
 from telegram.ext import Application, MessageHandler, filters
 from telegram import BotCommandScopeChat, BotCommandScopeAllPrivateChats
 from commands.game_management import GameManagement
@@ -188,6 +189,10 @@ async def post_init(application: Application) -> None:
         )
     )
 
+    application.bot_data["game_timeout_task"] = asyncio.create_task(
+        timeout_loop(application)
+    )
+
 
 def build_application() -> Application:
     """Создаёт и настраивает экземпляр Telegram Application."""
@@ -195,6 +200,8 @@ def build_application() -> Application:
 
     # Назначение функции инициализации после запуска
     application.post_init = post_init
+    application.post_stop = stop_timeout_loop
+    application.post_shutdown = stop_timeout_loop
     return application
 
 
