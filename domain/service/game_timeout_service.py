@@ -8,8 +8,8 @@ from domain.entity.player_action import PlayerAction
 from domain.repository.game_repository import GameRepository
 from utils import ensure_aware
 
-INTERVAL = timedelta(minutes=30)
-ZERO_BANK_GRACE = timedelta(minutes=2)
+CHECK_INTERVAL = timedelta(minutes=5)
+CLOSURE_GRACE = timedelta(minutes=30)
 logger = logging.getLogger(__name__)
 MAX_DURATION = timedelta(hours=12)
 
@@ -23,7 +23,7 @@ def check_game_timeout(session, now: datetime, announce_duration: bool = False):
     if state is None:
         state = GameTimeout(
             game_id=game.id,
-            next_check=ensure_aware(game.start_time) + INTERVAL,
+            next_check=ensure_aware(game.start_time) + CHECK_INTERVAL,
             buyin_id=0,
         )
         session.add(state)
@@ -47,8 +47,7 @@ def check_game_timeout(session, now: datetime, announce_duration: bool = False):
         "Timeout check: game=%s bank=%s now=%s next_check=%s deadline=%s",
         game.id, balance, now, state.next_check, state.deadline,
     )
-    # Empty-bank test mode must also bypass persisted 30-minute schedules.
-    if not due and not zero_bank:
+    if not due:
         return game.id, [], False
 
     latest_buyin = (
@@ -66,7 +65,7 @@ def check_game_timeout(session, now: datetime, announce_duration: bool = False):
         messages.append(f"⏱ Игра идёт {minutes // 60} ч {minutes % 60} мин.")
 
     renewed = False
-    state.next_check = now + INTERVAL
+    state.next_check = now + CHECK_INTERVAL
     if state.deadline is not None:
         if latest_buyin > state.buyin_id:
             renewed = True
@@ -99,9 +98,9 @@ def check_game_timeout(session, now: datetime, announce_duration: bool = False):
         reason = (
             "игра длится больше 12 часов" if overdue else "баланс банка меньше 2 евро"
         )
-        grace = ZERO_BANK_GRACE if zero_bank else INTERVAL
+        grace = CLOSURE_GRACE
         minutes = int(grace.total_seconds() // 60)
-        delay_text = "2 минуты" if zero_bank else f"{minutes} минут"
+        delay_text = f"{minutes} минут"
         if renewed:
             remaining_reason = "банк снова пуст" if zero_bank and not overdue else reason
             messages.append(

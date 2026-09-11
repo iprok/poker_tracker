@@ -362,57 +362,64 @@ class CashGameTests(unittest.IsolatedAsyncioTestCase):
                 )
             return game.id
 
-    def test_zero_bank_warns_immediately_and_closes_after_two_minutes(self):
+    def test_zero_bank_checks_every_five_minutes_and_closes_after_thirty(self):
         self.timed_game()
-        self.assertIn("2 минуты", self.timeout_check(0)[1][0])
-        self.assertFalse(self.timeout_check(1)[2])
-        self.assertTrue(self.timeout_check(2)[2])
+        self.assertEqual(self.timeout_check(4)[1], [])
+        self.assertIn("30 минут", self.timeout_check(5)[1][0])
+        for minute in range(10, 35, 5):
+            self.assertEqual(self.timeout_check(minute)[1:], ([], False))
+        self.assertTrue(self.timeout_check(35)[2])
         self.assertEqual(len(self.actions("end_game")), 1)
-        self.assertEqual(self.timeout_check(3)[1], [])
+        self.assertEqual(self.timeout_check(40)[1], [])
 
-    def test_zero_bank_bypasses_saved_check_after_last_exit(self):
+    def test_zero_bank_waits_for_next_check_after_last_exit(self):
         game_id = self.timed_game(2)
-        self.assertEqual(self.timeout_check(0)[1], [])
+        self.assertEqual(self.timeout_check(5)[1], [])
         with engine.Session.begin() as session:
             session.add(PlayerAction(
                 game_id=game_id, user_id=101, action="quit", amount=2, chips=6000
             ))
-        self.assertIn("2 минуты", self.timeout_check(1)[1][0])
-        self.assertFalse(self.timeout_check(2)[2])
-        self.assertTrue(self.timeout_check(3)[2])
+        self.assertEqual(self.timeout_check(6)[1], [])
+        self.assertIn("30 минут", self.timeout_check(10)[1][0])
+        self.assertFalse(self.timeout_check(35)[2])
+        self.assertTrue(self.timeout_check(40)[2])
 
     def test_zero_bank_buyin_prevents_closure(self):
         self.timed_game()
-        self.timeout_check(0)
+        self.timeout_check(5)
         self.execute_buyin()
-        self.assertFalse(self.timeout_check(2)[2])
+        self.execute_buyin()
+        self.assertEqual(self.timeout_check(10)[1], [
+            "Банк пополнен. Автоматическое завершение отменено."
+        ])
+        self.assertFalse(self.timeout_check(35)[2])
         self.assertEqual(self.actions("end_game"), [])
 
     def test_zero_bank_buyin_then_full_exit_sends_one_extension(self):
         game_id = self.timed_game()
-        self.timeout_check(0)
+        self.timeout_check(5)
         self.execute_buyin()
         with engine.Session.begin() as session:
             session.add(PlayerAction(
                 game_id=game_id, user_id=101, action="quit", amount=1, chips=3000
             ))
-        _, messages, ended = self.timeout_check(1)
+        _, messages, ended = self.timeout_check(10)
         self.assertFalse(ended)
         self.assertEqual(messages, [
             "⚠️ После предупреждения был закуп, но банк снова пуст. "
-            "Автозавершение отложено на 2 минуты, если не будет новых закупов."
+            "Автозавершение отложено на 30 минут, если не будет новых закупов."
         ])
-        self.assertFalse(self.timeout_check(2)[2])
-        self.assertTrue(self.timeout_check(3)[2])
+        self.assertFalse(self.timeout_check(35)[2])
+        self.assertTrue(self.timeout_check(40)[2])
 
     def test_timeout_warns_then_closes_low_bank(self):
         self.timed_game(1)
-        self.assertEqual(self.timeout_check(29)[1], [])
-        self.assertIn("меньше 2 евро", self.timeout_check(30)[1][0])
-        self.assertFalse(self.timeout_check(59)[2])
-        self.assertTrue(self.timeout_check(60)[2])
+        self.assertEqual(self.timeout_check(4)[1], [])
+        self.assertIn("меньше 2 евро", self.timeout_check(5)[1][0])
+        self.assertFalse(self.timeout_check(30)[2])
+        self.assertTrue(self.timeout_check(35)[2])
         self.assertEqual(len(self.actions("end_game")), 1)
-        self.assertEqual(self.timeout_check(90)[1], [])
+        self.assertEqual(self.timeout_check(40)[1], [])
 
     def test_timeout_buyin_cancels_low_bank_closure(self):
         self.timed_game(1)
